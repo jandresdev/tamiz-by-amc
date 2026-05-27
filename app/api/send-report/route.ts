@@ -7,15 +7,12 @@ import {
 import { createClient } from '@/lib/supabase';
 import type { RegulatoryScheme } from '@/lib/types';
 
-const OPS_EMAIL = 'ops@amcprincipal.com';
-
 /**
  * POST /api/send-report
  *
- * 1. Persiste el diagnóstico en tamiz_diagnosticos (Supabase DB)
- * 2. Llama a la Edge Function "send-diagnostic" que:
- *    - Descarga archivos de Supabase Storage
- *    - Envía el email a ops@amcprincipal.com por SMTP
+ * Persiste el diagnóstico completo en tamiz_diagnosticos (Supabase DB).
+ * El equipo de ops puede ver todos los diagnósticos en el Dashboard de Supabase
+ * o en la tabla tamiz_diagnosticos del proyecto.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -59,34 +56,17 @@ export async function POST(request: NextRequest) {
         .eq('id', sessionId);
     }
 
-    // ── 3. Invocar Edge Function para enviar el email ────────────────────────
+    // ── 3. Marcar sesión como completada ─────────────────────────────────────
     const supabase = await createClient();
-    const { data: fnData, error: fnError } = await supabase.functions.invoke('send-diagnostic', {
-      body: { sessionId },
-    });
-
-    if (fnError) {
-      console.error('[send-report] Edge function error:', fnError);
-      return NextResponse.json({
-        ok: false,
-        diagnosticoId: diagnostico.id,
-        sentToOps:     false,
-        message:       'El diagnóstico quedó guardado en Supabase pero no se pudo enviar el email.',
-        error:         fnError.message,
-      });
-    }
-
-    const ok       = fnData?.ok === true;
-    const adjuntos = fnData?.adjuntos ?? 0;
+    await supabase
+      .from('tamiz_sessions')
+      .update({ completed_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+      .eq('id', sessionId);
 
     return NextResponse.json({
-      ok,
+      ok:            true,
       diagnosticoId: diagnostico.id,
-      sentToOps:     ok,
-      adjuntos,
-      message: ok
-        ? `Diagnóstico enviado a ${OPS_EMAIL}${adjuntos > 0 ? ` con ${adjuntos} archivo(s) adjunto(s)` : ''}`
-        : 'Error al enviar el email. El diagnóstico quedó guardado en Supabase.',
+      message:       'Diagnóstico guardado en Supabase correctamente.',
     });
   } catch (error) {
     console.error('[send-report] Error:', error);
