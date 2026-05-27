@@ -7,12 +7,15 @@ import {
 import { createClient } from '@/lib/supabase';
 import type { RegulatoryScheme } from '@/lib/types';
 
+const OPS_EMAIL = 'ops@amcprincipal.com';
+
 /**
  * POST /api/send-report
  *
- * Persiste el diagnóstico completo en tamiz_diagnosticos (Supabase DB).
- * El equipo de ops puede ver todos los diagnósticos en el Dashboard de Supabase
- * o en la tabla tamiz_diagnosticos del proyecto.
+ * 1. Persiste el diagnóstico en tamiz_diagnosticos (Supabase DB)
+ * 2. Llama a la Edge Function "send-diagnostic" que:
+ *    - Descarga archivos de Supabase Storage
+ *    - Envía el email a ops@amcprincipal.com via Gmail SMTP
  */
 export async function POST(request: NextRequest) {
   try {
@@ -57,16 +60,43 @@ export async function POST(request: NextRequest) {
     }
 
     // ── 3. Marcar sesión como completada ─────────────────────────────────────
+    {
+      const supabase = await createClient();
+      await supabase
+        .from('tamiz_sessions')
+        .update({ completed_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+        .eq('id', sessionId);
+    }
+
+    // ── 4. Llamar Edge Function send-diagnostic (Gmail SMTP) ─────────────────
     const supabase = await createClient();
-    await supabase
-      .from('tamiz_sessions')
-      .update({ completed_at: new Date().toISOString(), updated_at: new Date().toISOString() })
-      .eq('id', sessionId);
+    const { data: fnData, error: fnError } = await supabase.functions.invoke('send-diagnostic', {
+      body: { sessionId },
+    });
+
+    if (fnError) {
+      console.error('[send-report] Edge function error:', fnError);
+      // El diagnóstico ya quedó guardado en DB aunque falle el email
+      return NextResponse.json({
+        ok:            false,
+        diagnosticoId: diagnostico.id,
+        sentToOps:     false,
+        message:       'Diagnóstico guardado en Supabase. Fallo el envío de email (verifica los secrets SMTP en Edge Functions).',
+        error:         fnError.message,
+      });
+    }
+
+    const ok       = fnData?.ok === true;
+    const adjuntos = fnData?.adjuntos ?? 0;
 
     return NextResponse.json({
-      ok:            true,
+      ok,
       diagnosticoId: diagnostico.id,
-      message:       'Diagnóstico guardado en Supabase correctamente.',
+      sentToOps:     ok,
+      adjuntos,
+      message: ok
+        ? `Diagnóstico enviado a ${OPS_EMAIL}${adjuntos > 0 ? ` con ${adjuntos} archivo(s) adjunto(s)` : ''}`
+        : 'Diagnóstico guardado. Error al enviar el email a ops.',
     });
   } catch (error) {
     console.error('[send-report] Error:', error);
