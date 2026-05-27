@@ -3,12 +3,14 @@ import { getSession, updateSession } from '@/lib/db';
 import { createClient } from '@/lib/supabase';
 import type { SendTokenRequest } from '@/lib/types';
 
+const OTP_TTL_MINUTES  = 10;
+const COOLDOWN_SECONDS = 60;
+
 /**
  * POST /api/send-token
  *
- * Usa Supabase Auth signInWithOtp para enviar el código de 6 dígitos.
- * El email lo envía Supabase con su infraestructura nativa.
- * Template: Supabase Dashboard → Auth → Email Templates → "Magic Link"
+ * Genera OTP de 6 dígitos, lo guarda en DB y llama a la
+ * Edge Function "send-otp" que lo envía al usuario via Resend.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -25,15 +27,15 @@ export async function POST(request: NextRequest) {
     const session = await getSession(sessionId);
 
     // ── Rate-limit: 60 s entre envíos ───────────────────────────────────────
-    if (session.verify_expiry) {
+    if (session.verify_expiry && session.verify_token) {
       const secsSince  = (Date.now() - new Date(session.updated_at).getTime()) / 1000;
       const stillValid = new Date(session.verify_expiry) > new Date();
-      if (secsSince < 60 && stillValid) {
+      if (secsSince < COOLDOWN_SECONDS && stillValid) {
         return NextResponse.json(
           {
             ok: false,
             error: 'Espera antes de solicitar un nuevo código',
-            retryAfter: Math.ceil(60 - secsSince),
+            retryAfter: Math.ceil(COOLDOWN_SECONDS - secsSince),
           },
           { status: 429 }
         );
@@ -48,29 +50,30 @@ export async function POST(request: NextRequest) {
       await updateSession(sessionId, updates as Parameters<typeof updateSession>[1]);
     }
 
-    // ── Supabase Auth OTP (nativo, sin SMTP propio) ──────────────────────────
+    // ── Generar OTP de 6 dígitos y guardarlo en DB ───────────────────────────
+    const otp    = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiry = new Date();
+    expiry.setMinutes(expiry.getMinutes() + OTP_TTL_MINUTES);
+
+    await updateSession(sessionId, {
+      verify_token:    otp,
+      verify_expiry:   expiry.toISOString(),
+      verify_attempts: 0,
+    } as Parameters<typeof updateSession>[1]);
+
+    // ── Llamar Edge Function send-otp (Resend) ───────────────────────────────
     const supabase = await createClient();
-    const { error: otpError } = await supabase.auth.signInWithOtp({
-      email,
-      options: { shouldCreateUser: true },
+    const { error: fnError } = await supabase.functions.invoke('send-otp', {
+      body: { email, token: otp, companyName: companyName ?? session.company_name ?? '' },
     });
 
-    if (otpError) {
-      console.error('[send-token] Supabase OTP error:', otpError.message);
+    if (fnError) {
+      console.error('[send-token] Edge function error:', fnError.message);
       return NextResponse.json(
-        { ok: false, error: 'No se pudo enviar el código. Verifica que el correo sea válido.' },
+        { ok: false, error: 'No se pudo enviar el código. Intenta de nuevo.' },
         { status: 500 }
       );
     }
-
-    // Marcar que se envió un código (para rate-limit; Supabase gestiona el TTL real)
-    const expiry = new Date();
-    expiry.setMinutes(expiry.getMinutes() + 10);
-    await updateSession(sessionId, {
-      verify_expiry:   expiry.toISOString(),
-      verify_token:    null,
-      verify_attempts: 0,
-    } as Parameters<typeof updateSession>[1]);
 
     return NextResponse.json({
       ok:      true,
