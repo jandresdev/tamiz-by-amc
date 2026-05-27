@@ -1,18 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSession, getDiagnosticoBySession, createDiagnostico } from '@/lib/db';
-import type { SendReportRequest } from '@/lib/types';
+import {
+  getSession,
+  getDiagnosticoBySession,
+  createDiagnostico,
+  markDiagnosticoSent,
+} from '@/lib/db';
+import { sendDiagnosticReport } from '@/lib/email';
+import { SCHEMES } from '@/lib/constants';
+import type { SendReportRequest, RegulatoryScheme } from '@/lib/types';
 
 export async function POST(request: NextRequest) {
   try {
     const body: SendReportRequest = await request.json();
-    const { sessionId } = body;
+    const { sessionId, normativaText } = body as SendReportRequest & { normativaText?: string };
 
     if (!sessionId) {
       return NextResponse.json(
-        {
-          ok: false,
-          error: 'Missing sessionId',
-        },
+        { ok: false, error: 'Missing sessionId' },
         { status: 400 }
       );
     }
@@ -20,50 +24,75 @@ export async function POST(request: NextRequest) {
     // Get session data
     const session = await getSession(sessionId);
 
-    // Check if diagnostico already exists
+    if (!session.email_verified) {
+      return NextResponse.json(
+        { ok: false, error: 'Email not verified' },
+        { status: 403 }
+      );
+    }
+
+    if (!session.preliminary_scheme) {
+      return NextResponse.json(
+        { ok: false, error: 'No diagnostic scheme determined' },
+        { status: 400 }
+      );
+    }
+
+    // Get or create diagnostico record
     let diagnostico = await getDiagnosticoBySession(sessionId);
 
     if (!diagnostico) {
-      // Create new diagnostico
-      if (!session.preliminary_scheme) {
-        return NextResponse.json(
-          {
-            ok: false,
-            error: 'No diagnostic scheme determined',
-          },
-          { status: 400 }
-        );
-      }
-
       diagnostico = await createDiagnostico(
         sessionId,
         session.company_name || 'Unknown',
         session.contact_email,
-        session.answers_json?.q0 || 'Not specified',
-        session.preliminary_scheme,
+        String(session.answers_json?.q0 || 'NOSE'),
+        session.preliminary_scheme as RegulatoryScheme,
         session.answers_json || {}
       );
     }
 
-    // TODO: Send to ops via Web3Forms
-    // TODO: Send to user via Brevo
-    // This will be implemented in Phase 5 (Integraciones Email)
-    console.log(`[TODO] Send report for ${diagnostico.id}`);
+    // Build scheme labels for emails
+    const diagnosedScheme = session.preliminary_scheme as RegulatoryScheme;
+    const initialIntuition = String(session.answers_json?.q0 || 'NOSE') as RegulatoryScheme | 'NOSE';
+
+    const diagnosedSchemeLabel =
+      SCHEMES[diagnosedScheme]?.label || diagnosedScheme;
+    const initialIntuitionLabel =
+      initialIntuition === 'NOSE'
+        ? 'No estoy seguro'
+        : SCHEMES[initialIntuition as RegulatoryScheme]?.label || initialIntuition;
+
+    const isMatch = diagnosedScheme === initialIntuition;
+
+    // Send report via Brevo (user) and Web3Forms (ops)
+    const { ok, opsResponseId, userResponseId } = await sendDiagnosticReport({
+      diagnosticoId: diagnostico.id,
+      companyName: session.company_name || 'Unknown',
+      contactEmail: session.contact_email,
+      initialIntuition,
+      diagnosedScheme,
+      diagnosedSchemeLabel,
+      initialIntuitionLabel,
+      isMatch,
+      answers: (session.answers_json as Record<string, string | string[]>) || {},
+      normativaText: normativaText || session.normativa_user_text || undefined,
+    });
+
+    // Mark diagnostico as sent
+    await markDiagnosticoSent(diagnostico.id, !!opsResponseId, !!userResponseId, opsResponseId, userResponseId);
 
     return NextResponse.json({
-      ok: true,
-      message: 'Report sent successfully',
+      ok,
       diagnosticoId: diagnostico.id,
-      sentToOps: false, // Will be true after Phase 5
-      sentToUser: false, // Will be true after Phase 5
+      sentToOps: !!opsResponseId,
+      sentToUser: !!userResponseId,
+      message: ok ? 'Report sent successfully' : 'Report partially sent',
     });
   } catch (error) {
-    console.error('Failed to send report:', error);
+    console.error('[send-report] Error:', error);
     return NextResponse.json(
-      {
-        ok: false,
-        error: 'Failed to send report',
-      },
+      { ok: false, error: 'Failed to send report' },
       { status: 500 }
     );
   }

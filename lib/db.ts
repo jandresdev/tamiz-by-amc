@@ -123,7 +123,7 @@ export async function updateSessionAnswer(
   const session = await getSession(sessionId);
   const answers = session.answers_json || {};
 
-  answers[step as keyof TamizAnswers] = answer;
+  (answers as Record<string, string | string[]>)[step] = answer;
 
   await updateSession(sessionId, {
     answers_json: answers,
@@ -340,7 +340,7 @@ export async function cleanupExpiredFiles(): Promise<number> {
       await client.storage
         .from('tamiz-files')
         .remove([file.supabase_path])
-        .catch((err) => console.error('Storage delete error:', err));
+        .catch((err: unknown) => console.error('Storage delete error:', err));
     }
 
     // Delete record
