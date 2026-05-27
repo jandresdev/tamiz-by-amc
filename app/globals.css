@@ -1314,6 +1314,97 @@ textarea,
 }
 
 /* --------------------------------------------------------------------------
+   Session Timeout Modal
+   -------------------------------------------------------------------------- */
+.timeout-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  background: rgba(24,23,26,0.55);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: fadeIn .2s ease;
+}
+
+.timeout-modal {
+  background: var(--card);
+  border-radius: var(--r3);
+  padding: 36px 32px 28px;
+  max-width: 400px;
+  width: 100%;
+  box-shadow: 0 20px 60px rgba(0,0,0,.25);
+  text-align: center;
+  animation: slideUp .25s ease;
+}
+
+.timeout-icon {
+  font-size: 44px;
+  margin-bottom: 16px;
+  display: block;
+  line-height: 1;
+}
+
+.timeout-title {
+  font-size: 19px;
+  font-weight: 700;
+  color: var(--t1);
+  margin: 0 0 12px;
+  letter-spacing: -.015em;
+}
+
+.timeout-body {
+  font-size: 14px;
+  color: var(--t2);
+  line-height: 1.7;
+  margin: 0 0 24px;
+}
+
+.timeout-body strong {
+  color: var(--amb-t2);
+  font-weight: 700;
+}
+
+.timeout-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.timeout-actions .action-btn {
+  flex: none;
+  width: 100%;
+  min-width: 0;
+}
+
+.timeout-bar-wrap {
+  height: 4px;
+  background: var(--bg2);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.timeout-bar {
+  height: 100%;
+  background: var(--amb-bdr);
+  border-radius: 2px;
+  transition: width 1s linear;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* --------------------------------------------------------------------------
    Print Styles
    -------------------------------------------------------------------------- */
 @media print {

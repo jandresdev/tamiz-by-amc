@@ -4,6 +4,9 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import type { TamizStep, RegulatoryScheme, TamizAnswers } from '@/lib/types';
 import { SESSION_TIMEOUT_MINUTES } from '@/lib/constants';
 
+// Warn the user this many minutes before the session expires
+const TIMEOUT_WARN_MINUTES_BEFORE = 5;
+
 export interface SessionState {
   sessionId: string | null;
   companyName: string;
@@ -15,6 +18,11 @@ export interface SessionState {
   preliminaryScheme: RegulatoryScheme | null;
   history: TamizStep[];
   files: Record<string, File>;
+}
+
+export interface TimeoutWarning {
+  active: boolean;
+  minutesLeft: number; // remaining minutes at warning time
 }
 
 const INITIAL_STATE: SessionState = {
@@ -33,29 +41,51 @@ const INITIAL_STATE: SessionState = {
 const ALL_SCHEMES: RegulatoryScheme[] = ['AUTOGEN', 'PMARG', 'SUMIN', 'VENTAEXC', 'SINSOP'];
 
 export function useTamizSession() {
-  const [state, setState] = useState<SessionState>(INITIAL_STATE);
-  const lastActivityRef   = useRef<number>(Date.now());
+  const [state, setState]                   = useState<SessionState>(INITIAL_STATE);
+  const [timeoutWarning, setTimeoutWarning] = useState<TimeoutWarning>({ active: false, minutesLeft: TIMEOUT_WARN_MINUTES_BEFORE });
+  const lastActivityRef                     = useRef<number>(Date.now());
 
-  // Touch activity timestamp on any state change
+  // Touch activity timestamp — clears any active timeout warning
   const touch = useCallback(() => {
     lastActivityRef.current = Date.now();
+    setTimeoutWarning({ active: false, minutesLeft: TIMEOUT_WARN_MINUTES_BEFORE });
   }, []);
 
-  // Session timeout check
+  // Session timeout check — runs on a 30-second tick
   useEffect(() => {
     const interval = setInterval(() => {
       const elapsed = (Date.now() - lastActivityRef.current) / 60_000; // minutes
-      if (elapsed > SESSION_TIMEOUT_MINUTES && state.currentStep !== 'qName') {
-        reset();
+
+      // Only act outside the first step (qName has no saved data to lose)
+      if (state.currentStep === 'qName') return;
+
+      if (elapsed >= SESSION_TIMEOUT_MINUTES) {
+        // Full timeout → silent reset
+        setTimeoutWarning({ active: false, minutesLeft: TIMEOUT_WARN_MINUTES_BEFORE });
+        setState(INITIAL_STATE);
+        lastActivityRef.current = Date.now();
+      } else if (elapsed >= SESSION_TIMEOUT_MINUTES - TIMEOUT_WARN_MINUTES_BEFORE) {
+        // Approaching timeout → show warning if not already shown
+        const minutesLeft = Math.ceil(SESSION_TIMEOUT_MINUTES - elapsed);
+        setTimeoutWarning((prev) =>
+          prev.active ? prev : { active: true, minutesLeft }
+        );
       }
     }, 30_000); // check every 30 seconds
+
     return () => clearInterval(interval);
-  });
+  }, [state.currentStep]); // only re-register when step changes
 
   const reset = useCallback(() => {
     setState(INITIAL_STATE);
+    setTimeoutWarning({ active: false, minutesLeft: TIMEOUT_WARN_MINUTES_BEFORE });
     lastActivityRef.current = Date.now();
   }, []);
+
+  /** Dismiss the timeout warning and reset the inactivity clock. */
+  const extendSession = useCallback(() => {
+    touch();
+  }, [touch]);
 
   const goBack = useCallback(() => {
     setState((prev) => {
@@ -130,6 +160,8 @@ export function useTamizSession() {
     advanceTo,
     setVerified,
     setFile,
+    extendSession,
+    timeoutWarning,
     canGoBack: state.history.length > 0,
     isOnFirstStep: state.currentStep === 'qName',
   };

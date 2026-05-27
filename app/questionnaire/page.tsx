@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useCallback } from 'react';
 import BrandHeader from '@/components/ui/BrandHeader';
 import ProgressBar from '@/components/ui/ProgressBar';
 import SchemePills from '@/components/ui/SchemePills';
@@ -15,19 +15,56 @@ import QA3 from '@/components/steps/QA3';
 import QB1 from '@/components/steps/QB1';
 import QB2 from '@/components/steps/QB2';
 import Result from '@/components/steps/Result';
+import SessionTimeoutModal from '@/components/ui/SessionTimeoutModal';
 import { useTamizSession } from '@/hooks/useTamizSession';
 import { routeNextStep } from '@/lib/logic';
 import { initSecurityMeasures } from '@/lib/security';
 import type { RegulatoryScheme } from '@/lib/types';
 
 export default function QuestionnairePage() {
-  const { state, reset, goBack, advanceTo, setVerified, setFile, canGoBack, isOnFirstStep } = useTamizSession();
+  const { state, reset, goBack, advanceTo, setVerified, setFile, extendSession, timeoutWarning, canGoBack, isOnFirstStep } = useTamizSession();
 
   // Init security on mount
   useEffect(() => {
     const cleanup = initSecurityMeasures();
     return cleanup;
   }, []);
+
+  // Warn before unload/refresh when session has progress
+  useEffect(() => {
+    const guard = (e: BeforeUnloadEvent) => {
+      if (state.currentStep !== 'qName' && state.currentStep !== 'resultFinal') {
+        e.preventDefault();
+        // Modern browsers show a generic message; the string is ignored
+        return '';
+      }
+    };
+    window.addEventListener('beforeunload', guard);
+    return () => window.removeEventListener('beforeunload', guard);
+  }, [state.currentStep]);
+
+  // ── File upload helper (fire-and-forget) ────────────────────────────────────
+  /**
+   * Uploads a file to Supabase Storage in the background.
+   * Updates files_json in the DB session record.
+   * Non-blocking: user advances to next step immediately.
+   */
+  const uploadFileAsync = useCallback(async (stepKey: string, file: File) => {
+    if (!state.sessionId) return;
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      fd.append('sessionId', state.sessionId);
+      fd.append('stepKey', stepKey);
+      const res = await fetch('/api/upload-file', { method: 'POST', body: fd });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        console.warn('[upload] File upload failed:', data.error);
+      }
+    } catch (e) {
+      console.warn('[upload] Non-critical upload error:', e);
+    }
+  }, [state.sessionId]);
 
   // ── Handlers ──────────────────────────────────────────────────────────────
 
@@ -84,7 +121,10 @@ export default function QuestionnairePage() {
 
   /** Step 4: q1 → qA1 or qB1 */
   const handleQ1 = (value: string, file: File | null) => {
-    if (file) setFile('q1', file);
+    if (file) {
+      setFile('q1', file);
+      uploadFileAsync('q1', file); // uploads in background, non-blocking
+    }
     const { nextStep, keepSchemes, preliminaryScheme } = routeNextStep('q1', value, state.answers);
     advanceTo(nextStep, { q1: value }, keepSchemes, preliminaryScheme);
   };
@@ -107,7 +147,10 @@ export default function QuestionnairePage() {
 
   /** Branch B steps */
   const handleQB1 = (value: string, file: File | null) => {
-    if (file) setFile('qB1', file);
+    if (file) {
+      setFile('qB1', file);
+      uploadFileAsync('qB1', file); // uploads in background, non-blocking
+    }
     const { nextStep, keepSchemes, preliminaryScheme } = routeNextStep('qB1', value, state.answers);
     advanceTo(nextStep, { qB1: value }, keepSchemes, preliminaryScheme);
   };
@@ -287,6 +330,15 @@ export default function QuestionnairePage() {
 
         <p className="footer">AMC Principal specialized services platform · Bogotá · Cali · Miami · Palo Alto</p>
       </div>
+
+      {/* Session timeout warning modal */}
+      {timeoutWarning.active && (
+        <SessionTimeoutModal
+          minutesLeft={timeoutWarning.minutesLeft}
+          onExtend={extendSession}
+          onEnd={reset}
+        />
+      )}
     </div>
   );
 }
