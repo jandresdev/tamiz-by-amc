@@ -1,22 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
   getSession,
-  getSessionFiles,
   getDiagnosticoBySession,
   createDiagnostico,
-  markDiagnosticoSent,
 } from '@/lib/db';
 import { createClient } from '@/lib/supabase';
-import { sendDiagnosticReport } from '@/lib/email';
-import { SCHEMES } from '@/lib/constants';
-import type { RegulatoryScheme, DiagnosticAttachment } from '@/lib/types';
+import type { RegulatoryScheme } from '@/lib/types';
+
+const OPS_EMAIL = 'ops@amcprincipal.com';
 
 /**
  * POST /api/send-report
  *
  * 1. Persiste el diagnóstico en tamiz_diagnosticos (Supabase DB)
- * 2. Descarga archivos adjuntos de Supabase Storage
- * 3. Envía todo a ops@amcprincipal.com con adjuntos (Resend)
+ * 2. Llama a la Edge Function "send-diagnostic" que:
+ *    - Descarga archivos de Supabase Storage
+ *    - Envía el email a ops@amcprincipal.com por SMTP
  */
 export async function POST(request: NextRequest) {
   try {
@@ -51,7 +50,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Persistir normativa si fue enviada
+    // ── 2. Persistir normativa si fue enviada ────────────────────────────────
     if (normativaText) {
       const supabase = await createClient();
       await supabase
@@ -60,74 +59,33 @@ export async function POST(request: NextRequest) {
         .eq('id', sessionId);
     }
 
-    // ── 2. Descargar archivos adjuntos de Supabase Storage ──────────────────
-    const attachments: DiagnosticAttachment[] = [];
-    const fileRecords = await getSessionFiles(sessionId);
-
-    if (fileRecords.length > 0) {
-      const supabase = await createClient();
-
-      for (const record of fileRecords) {
-        try {
-          const { data: blob, error } = await supabase.storage
-            .from('tamiz-files')
-            .download(record.supabase_path);
-
-          if (error || !blob) {
-            console.warn(`[send-report] No se pudo descargar ${record.file_name}:`, error?.message);
-            continue;
-          }
-
-          const arrayBuffer = await blob.arrayBuffer();
-          attachments.push({
-            filename:    record.file_name,
-            content:     Buffer.from(arrayBuffer),
-            contentType: record.file_type,
-          });
-        } catch (e) {
-          console.warn(`[send-report] Error al descargar ${record.file_name}:`, e);
-        }
-      }
-    }
-
-    // ── 3. Enviar email a ops con adjuntos (Resend) ─────────────────────────
-    const diagnosedScheme = session.preliminary_scheme as RegulatoryScheme;
-    const initialIntuition = String(session.answers_json?.q0 ?? 'NOSE');
-    const diagnosedSchemeLabel  = SCHEMES[diagnosedScheme]?.label  ?? diagnosedScheme;
-    const initialIntuitionLabel = initialIntuition === 'NOSE'
-      ? 'No estaba seguro'
-      : (SCHEMES[initialIntuition as RegulatoryScheme]?.label ?? initialIntuition);
-
-    const { ok, opsResponseId } = await sendDiagnosticReport({
-      diagnosticoId:       diagnostico.id,
-      companyName:         session.company_name ?? 'Sin nombre',
-      contactEmail:        session.contact_email,
-      initialIntuition,
-      diagnosedScheme,
-      diagnosedSchemeLabel,
-      initialIntuitionLabel,
-      isMatch:             diagnosedScheme === initialIntuition,
-      answers:             (session.answers_json as Record<string, string | string[]>) ?? {},
-      normativaText:       normativaText ?? session.normativa_user_text ?? undefined,
-      attachments,
+    // ── 3. Invocar Edge Function para enviar el email ────────────────────────
+    const supabase = await createClient();
+    const { data: fnData, error: fnError } = await supabase.functions.invoke('send-diagnostic', {
+      body: { sessionId },
     });
 
-    // ── 4. Marcar diagnóstico como enviado ───────────────────────────────────
-    await markDiagnosticoSent(
-      diagnostico.id,
-      ok,
-      false,
-      opsResponseId,
-      undefined
-    );
+    if (fnError) {
+      console.error('[send-report] Edge function error:', fnError);
+      return NextResponse.json({
+        ok: false,
+        diagnosticoId: diagnostico.id,
+        sentToOps:     false,
+        message:       'El diagnóstico quedó guardado en Supabase pero no se pudo enviar el email.',
+        error:         fnError.message,
+      });
+    }
+
+    const ok       = fnData?.ok === true;
+    const adjuntos = fnData?.adjuntos ?? 0;
 
     return NextResponse.json({
       ok,
       diagnosticoId: diagnostico.id,
       sentToOps:     ok,
-      adjuntos:      attachments.length,
-      message:       ok
-        ? `Diagnóstico enviado a ops@amcprincipal.com${attachments.length > 0 ? ` con ${attachments.length} archivo(s) adjunto(s)` : ''}`
+      adjuntos,
+      message: ok
+        ? `Diagnóstico enviado a ${OPS_EMAIL}${adjuntos > 0 ? ` con ${adjuntos} archivo(s) adjunto(s)` : ''}`
         : 'Error al enviar el email. El diagnóstico quedó guardado en Supabase.',
     });
   } catch (error) {
