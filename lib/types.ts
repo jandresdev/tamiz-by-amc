@@ -38,6 +38,12 @@ export interface FileMetadata {
   uploadedAt: string;
 }
 
+export interface DiagnosticAttachment {
+  filename: string;
+  content: Buffer;
+  contentType: string;
+}
+
 export interface FilesJson {
   [key: string]: FileMetadata;
 }
