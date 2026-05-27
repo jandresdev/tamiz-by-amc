@@ -1,12 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSession, setVerifyToken, updateSession } from '@/lib/db';
-import { sendVerificationEmail, registerVerificationRequest } from '@/lib/email';
+import { getSession, updateSession } from '@/lib/db';
+import { createClient } from '@/lib/supabase';
 import type { SendTokenRequest } from '@/lib/types';
-
-// Generate a random 6-digit token
-function generateToken(): string {
-  return Math.floor(100000 + Math.random() * 900000).toString();
-}
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,66 +10,71 @@ export async function POST(request: NextRequest) {
 
     if (!sessionId || !email) {
       return NextResponse.json(
-        { ok: false, error: 'Missing required fields' },
+        { ok: false, error: 'Faltan campos requeridos (sessionId, email)' },
         { status: 400 }
       );
     }
 
-    // Verify session exists
     const session = await getSession(sessionId);
 
     // Rate-limit: enforce 60s cooldown between sends
     if (session.verify_expiry) {
+      const updatedAt  = new Date(session.updated_at);
       const lastExpiry = new Date(session.verify_expiry);
-      // Token was set within the last 9 minutes (10min expiry - 1min buffer) = 9 min cooldown overlap
-      // Use a simpler check: look at updated_at to enforce 60s minimum
-      const updatedAt = new Date(session.updated_at);
-      const secsSinceUpdate = (Date.now() - updatedAt.getTime()) / 1000;
-      if (secsSinceUpdate < 60 && lastExpiry > new Date()) {
+      const secsSince  = (Date.now() - updatedAt.getTime()) / 1000;
+      if (secsSince < 60 && lastExpiry > new Date()) {
         return NextResponse.json(
-          { ok: false, error: 'Please wait before requesting a new code', retryAfter: Math.ceil(60 - secsSinceUpdate) },
+          { ok: false, error: 'Espera antes de solicitar un nuevo código', retryAfter: Math.ceil(60 - secsSince) },
           { status: 429 }
         );
       }
     }
 
-    // Generate and persist token (10-minute expiry)
-    const token = generateToken();
-    await setVerifyToken(sessionId, token, 10);
-
-    // Persist real email + company name onto the session
-    const sessionUpdates: Record<string, string> = {};
-    if (email && session.contact_email !== email) {
-      sessionUpdates.contact_email = email;
-    }
-    if (companyName && !session.company_name) {
-      sessionUpdates.company_name = companyName;
-    }
-    if (Object.keys(sessionUpdates).length > 0) {
-      await updateSession(sessionId, sessionUpdates as Parameters<typeof updateSession>[1]);
+    // Update session with real email/company if they changed
+    const updates: Record<string, string> = {};
+    if (email && session.contact_email !== email) updates.contact_email = email;
+    if (companyName && !session.company_name) updates.company_name = companyName;
+    if (Object.keys(updates).length > 0) {
+      await updateSession(sessionId, updates as Parameters<typeof updateSession>[1]);
     }
 
-    // Send verification email via Brevo
-    const sent = await sendVerificationEmail(email, companyName || session.company_name || email, token);
-
-    // Register ops audit trail via Web3Forms (non-blocking)
-    registerVerificationRequest(
-      companyName || session.company_name || email,
+    // ── Supabase Auth OTP ────────────────────────────────────────────────────
+    // Supabase sends a 6-digit code to the user's email.
+    // Configure the email template in: Supabase dashboard → Auth → Email Templates.
+    const supabase = await createClient();
+    const { error: otpError } = await supabase.auth.signInWithOtp({
       email,
-      token
-    ).catch(() => {/* non-critical */});
+      options: {
+        shouldCreateUser: true, // create Supabase auth user if first time
+      },
+    });
+
+    if (otpError) {
+      console.error('[send-token] Supabase OTP error:', otpError.message);
+      return NextResponse.json(
+        { ok: false, error: 'No se pudo enviar el código. Verifica que el correo sea válido.' },
+        { status: 500 }
+      );
+    }
+
+    // Track that a code was sent (rate-limit; Supabase manages the real expiry)
+    const expiry = new Date();
+    expiry.setMinutes(expiry.getMinutes() + 60); // Supabase OTP default TTL = 1 h
+    await updateSession(sessionId, {
+      verify_expiry: expiry.toISOString(),
+      verify_token: null,      // token is managed by Supabase, not stored locally
+      verify_attempts: 0,
+    } as Parameters<typeof updateSession>[1]);
 
     return NextResponse.json({
       ok: true,
-      sent,
-      message: sent ? 'Token sent successfully' : 'Token generated but email delivery failed',
-      // Only expose token in development for testing
-      ...(process.env.NODE_ENV === 'development' && { token }),
+      sent: true,
+      message: 'Código enviado. Revisa tu bandeja de entrada.',
     });
   } catch (error) {
     console.error('[send-token] Error:', error);
     return NextResponse.json(
-      { ok: false, error: 'Failed to send token' },
+      { ok: false, error: 'Error al procesar la solicitud' },
       { status: 500 }
     );
   }
