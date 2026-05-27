@@ -15,7 +15,7 @@ const OPS_EMAIL = 'ops@amcprincipal.com';
  * 1. Persiste el diagnóstico en tamiz_diagnosticos (Supabase DB)
  * 2. Llama a la Edge Function "send-diagnostic" que:
  *    - Descarga archivos de Supabase Storage
- *    - Envía el email a ops@amcprincipal.com via Gmail SMTP
+ *    - Envía el email a ops@amcprincipal.com via Resend
  */
 export async function POST(request: NextRequest) {
   try {
