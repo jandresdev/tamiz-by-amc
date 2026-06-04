@@ -90,14 +90,18 @@ CREATE POLICY "profile_select_own" ON tamiz_user_profiles
 CREATE POLICY "profile_insert_own" ON tamiz_user_profiles
   FOR INSERT WITH CHECK (auth.uid() = id);
 
+-- Helper function to prevent infinite recursion in RLS policies
+CREATE OR REPLACE FUNCTION is_superadmin()
+RETURNS BOOLEAN AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM tamiz_user_profiles
+    WHERE id = auth.uid() AND role = 'superadmin'
+  );
+$$ LANGUAGE sql SECURITY DEFINER;
+
 -- Superadmins tienen acceso completo a todos los perfiles
 CREATE POLICY "profile_superadmin_all" ON tamiz_user_profiles
-  FOR ALL USING (
-    EXISTS (
-      SELECT 1 FROM tamiz_user_profiles p2
-      WHERE p2.id = auth.uid() AND p2.role = 'superadmin'
-    )
-  );
+  FOR ALL USING (is_superadmin());
 
 -- ----------------------------------------------------------------------------
 -- 5. RLS — tamiz_app_config
@@ -108,12 +112,7 @@ CREATE POLICY "config_read_authenticated" ON tamiz_app_config
   FOR SELECT USING (auth.uid() IS NOT NULL);
 
 CREATE POLICY "config_write_superadmin" ON tamiz_app_config
-  FOR ALL USING (
-    EXISTS (
-      SELECT 1 FROM tamiz_user_profiles p
-      WHERE p.id = auth.uid() AND p.role = 'superadmin'
-    )
-  );
+  FOR ALL USING (is_superadmin());
 
 -- ----------------------------------------------------------------------------
 -- 6. Índices de rendimiento
@@ -143,9 +142,4 @@ CREATE POLICY "sessions_update_own" ON tamiz_sessions
   FOR UPDATE USING (auth.uid() = user_id OR user_id IS NULL);
 
 CREATE POLICY "sessions_superadmin_all" ON tamiz_sessions
-  FOR ALL USING (
-    EXISTS (
-      SELECT 1 FROM tamiz_user_profiles p
-      WHERE p.id = auth.uid() AND p.role = 'superadmin'
-    )
-  );
+  FOR ALL USING (is_superadmin());

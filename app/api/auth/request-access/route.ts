@@ -54,6 +54,43 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // ── BOOTSTRAP SUPERADMIN ───────────────────────────────────────────────
+    const SUPERADMIN_EMAIL = process.env.SUPERADMIN_EMAIL || 'ops@amcprincipal.com';
+    const isSuperAdminReq = contactEmail.trim().toLowerCase() === SUPERADMIN_EMAIL.toLowerCase();
+
+    if (isSuperAdminReq) {
+      // Create user directly via Auth Admin API
+      const { data: inviteData, error: inviteError } = await admin.auth.admin.inviteUserByEmail(
+        contactEmail.trim().toLowerCase(),
+        {
+          data: { contact_name: contactName.trim(), company_name: companyName.trim() },
+          redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/access`,
+        }
+      );
+
+      if (inviteError || !inviteData?.user) {
+        return NextResponse.json(
+          { ok: false, error: inviteError?.message ?? 'Error al crear el SuperAdmin.' },
+          { status: 500 }
+        );
+      }
+
+      // Create profile as superadmin
+      await admin.from('tamiz_user_profiles').upsert({
+        id:            inviteData.user.id,
+        contact_name:  contactName.trim(),
+        company_name:  companyName.trim(),
+        contact_email: contactEmail.trim().toLowerCase(),
+        access_reason: accessReason?.trim() ?? null,
+        status:        'approved',
+        role:          'superadmin',
+        approved_by:   'system',
+        approved_at:   new Date().toISOString(),
+      });
+
+      return NextResponse.json({ ok: true, message: 'Cuenta SuperAdmin creada. Revise su email para establecer la contraseña.' });
+    }
+
     // Check existing access requests (to avoid duplicate pending requests)
     const { data: existingReq } = await admin
       .from('tamiz_access_requests')

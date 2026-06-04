@@ -71,8 +71,8 @@ function AccessPageContent() {
         setLoading(false);
         return;
       }
-      // Middleware handles destination after login
-      window.location.href = nextParam === 'superadmin' ? '/superadmin' : '/questionnaire';
+      // Let the proxy middleware handle the role-based routing
+      window.location.href = '/access';
     } catch {
       showMsg('Error al iniciar sesión. Intente de nuevo.', 'error');
       submitRef.current = false;
