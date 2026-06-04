@@ -6,21 +6,19 @@ interface ProgressBarProps {
   currentStep: TamizStep;
 }
 
-// Map each step to its visual progress index (1-6)
+// Map each step to its visual progress index (1-4)
 const STEP_PROGRESS: Record<TamizStep, number> = {
-  qName: 1,
-  qVerify: 2,
-  q0: 3,
-  q1: 4,
-  qA1: 5,
-  qA2: 5,
-  qA3: 6,
-  qB1: 5,
-  qB2: 6,
-  resultFinal: 6,
+  q0: 1,
+  q1: 2,
+  qA1: 3,
+  qA2: 3,
+  qA3: 4,
+  qB1: 3,
+  qB2: 4,
+  resultFinal: 4,
 };
 
-const TOTAL_STEPS = 6;
+const TOTAL_STEPS = 4;
 
 export default function ProgressBar({ currentStep }: ProgressBarProps) {
   const currentIndex = STEP_PROGRESS[currentStep] ?? 1;

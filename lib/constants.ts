@@ -56,14 +56,6 @@ export const COLOR_PALETTE = {
 };
 
 export const QUESTIONS = {
-  qName: {
-    title: '¿Cuál es el nombre de tu empresa?',
-    subtitle: 'Necesitamos algunos datos para comenzar',
-  },
-  qVerify: {
-    title: 'Verificación de Email',
-    subtitle: 'Ingresa el código de 6 dígitos que enviamos a tu email',
-  },
   q0: {
     title: '¿Cuál crees que es tu esquema?',
     subtitle: 'Selecciona tu intuición inicial (puedes cambiarla después)',
@@ -119,14 +111,12 @@ export const BREVO_EMAIL_CONFIG = {
 };
 
 export const STEP_ORDER: Record<string, number> = {
-  qName: 1,
-  qVerify: 2,
-  q0: 3,
-  q1: 4,
-  qA1: 5,
-  qA2: 6,
-  qA3: 7,
-  qB1: 5,
-  qB2: 6,
-  resultFinal: 8,
+  q0: 1,
+  q1: 2,
+  qA1: 3,
+  qA2: 4,
+  qA3: 5,
+  qB1: 3,
+  qB2: 4,
+  resultFinal: 6,
 };

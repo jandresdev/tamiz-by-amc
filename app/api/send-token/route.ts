@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession, updateSession } from '@/lib/db';
-import { createClient } from '@/lib/supabase';
+import { createClient } from '@/lib/supabase.server';
 import type { SendTokenRequest } from '@/lib/types';
 
 const OTP_TTL_MINUTES  = 10;

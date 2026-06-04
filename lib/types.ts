@@ -8,8 +8,6 @@ export type RegulatoryScheme =
   | 'SINSOP';
 
 export type TamizStep =
-  | 'qName'
-  | 'qVerify'
   | 'q0'
   | 'q1'
   | 'qA1'

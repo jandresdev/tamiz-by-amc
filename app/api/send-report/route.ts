@@ -4,7 +4,7 @@ import {
   getDiagnosticoBySession,
   createDiagnostico,
 } from '@/lib/db';
-import { createClient } from '@/lib/supabase';
+import { createClient } from '@/lib/supabase.server';
 import type { RegulatoryScheme } from '@/lib/types';
 
 const OPS_EMAIL = 'ops@amcprincipal.com';

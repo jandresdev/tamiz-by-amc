@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase';
+import { createClient } from '@/lib/supabase.server';
 import { createFileRecord, getSession, updateSession } from '@/lib/db';
 import { ALLOWED_FILE_TYPES, MAX_FILE_SIZE, FILE_EXPIRY_DAYS } from '@/lib/constants';
 import type { FilesJson, FileMetadata } from '@/lib/types';

@@ -12,7 +12,6 @@ export interface SessionState {
   companyName: string;
   contactEmail: string;
   currentStep: TamizStep;
-  emailVerified: boolean;
   answers: TamizAnswers;
   activeSchemes: RegulatoryScheme[];
   preliminaryScheme: RegulatoryScheme | null;
@@ -22,15 +21,14 @@ export interface SessionState {
 
 export interface TimeoutWarning {
   active: boolean;
-  minutesLeft: number; // remaining minutes at warning time
+  minutesLeft: number;
 }
 
 const INITIAL_STATE: SessionState = {
   sessionId: null,
   companyName: '',
   contactEmail: '',
-  currentStep: 'qName',
-  emailVerified: false,
+  currentStep: 'q0',   // Starts directly at q0 — auth handles identification
   answers: {},
   activeSchemes: ['AUTOGEN', 'PMARG', 'SUMIN', 'VENTAEXC', 'SINSOP'],
   preliminaryScheme: null,
@@ -56,36 +54,37 @@ export function useTamizSession() {
     const interval = setInterval(() => {
       const elapsed = (Date.now() - lastActivityRef.current) / 60_000; // minutes
 
-      // Only act outside the first step (qName has no saved data to lose)
-      if (state.currentStep === 'qName') return;
+      // Only act when user has started the questionnaire
+      if (state.currentStep === 'q0') return;
 
       if (elapsed >= SESSION_TIMEOUT_MINUTES) {
         // Full timeout → silent reset
         setTimeoutWarning({ active: false, minutesLeft: TIMEOUT_WARN_MINUTES_BEFORE });
-        setState(INITIAL_STATE);
+        setState(prev => ({ ...INITIAL_STATE, companyName: prev.companyName, contactEmail: prev.contactEmail }));
         lastActivityRef.current = Date.now();
       } else if (elapsed >= SESSION_TIMEOUT_MINUTES - TIMEOUT_WARN_MINUTES_BEFORE) {
-        // Approaching timeout → show warning if not already shown
         const minutesLeft = Math.ceil(SESSION_TIMEOUT_MINUTES - elapsed);
         setTimeoutWarning((prev) =>
           prev.active ? prev : { active: true, minutesLeft }
         );
       }
-    }, 30_000); // check every 30 seconds
+    }, 30_000);
 
     return () => clearInterval(interval);
-  }, [state.currentStep]); // only re-register when step changes
+  }, [state.currentStep]);
 
-  const reset = useCallback(() => {
-    setState(INITIAL_STATE);
+  const reset = useCallback((keepUser = true) => {
+    setState(prev => ({
+      ...INITIAL_STATE,
+      // Preserve user identity across resets
+      companyName:  keepUser ? prev.companyName  : '',
+      contactEmail: keepUser ? prev.contactEmail : '',
+    }));
     setTimeoutWarning({ active: false, minutesLeft: TIMEOUT_WARN_MINUTES_BEFORE });
     lastActivityRef.current = Date.now();
   }, []);
 
-  /** Dismiss the timeout warning and reset the inactivity clock. */
-  const extendSession = useCallback(() => {
-    touch();
-  }, [touch]);
+  const extendSession = useCallback(() => { touch(); }, [touch]);
 
   const goBack = useCallback(() => {
     setState((prev) => {
@@ -124,22 +123,18 @@ export function useTamizSession() {
   );
 
   /**
-   * Store session info after initial name/email submission.
-   * Does NOT mark email as verified — that happens when the token is confirmed.
+   * Initialise session identity from the authenticated user profile.
+   * Called once when the questionnaire page mounts.
    */
-  const setVerified = useCallback(
-    (email: string, company: string, sessionId: string) => {
-      setState((prev) => ({
-        ...prev,
-        sessionId,
-        contactEmail: email,
-        companyName: company,
-        emailVerified: false, // will be set true in advanceTo after token verification
-      }));
-      touch();
-    },
-    [touch]
-  );
+  const initFromUser = useCallback((companyName: string, contactEmail: string, sessionId?: string) => {
+    setState((prev) => ({
+      ...prev,
+      companyName,
+      contactEmail,
+      sessionId: sessionId ?? prev.sessionId,
+    }));
+    touch();
+  }, [touch]);
 
   const setFile = useCallback((step: string, file: File | null) => {
     setState((prev) => {
@@ -153,16 +148,21 @@ export function useTamizSession() {
     });
   }, []);
 
+  const setSessionId = useCallback((id: string) => {
+    setState(prev => ({ ...prev, sessionId: id }));
+  }, []);
+
   return {
     state,
     reset,
     goBack,
     advanceTo,
-    setVerified,
+    initFromUser,
+    setSessionId,
     setFile,
     extendSession,
     timeoutWarning,
-    canGoBack: state.history.length > 0,
-    isOnFirstStep: state.currentStep === 'qName',
+    canGoBack:     state.history.length > 0,
+    isOnFirstStep: state.currentStep === 'q0',
   };
 }

@@ -3,31 +3,31 @@ import { createSession, updateSession } from '@/lib/db';
 
 export async function POST(request: NextRequest) {
   try {
-    // Accept optional email/companyName in the body
     let email: string | undefined;
     let companyName: string | undefined;
+    let userId: string | undefined;
 
     try {
       const body = await request.json();
       email = body.email;
       companyName = body.companyName;
+      userId = body.userId;
     } catch {
-      // Body may be empty — that's fine, we fall back to temp email
+      // Body may be empty — fall back to temp email
     }
 
-    // Create session — use real email if provided, otherwise placeholder
     const sessionEmail = email || `pending-${Date.now()}@tamiz.local`;
     const session = await createSession(sessionEmail);
 
-    // Persist company name immediately if provided
-    if (companyName) {
-      await updateSession(session.id, { company_name: companyName });
+    const updates: Record<string, unknown> = {};
+    if (companyName) updates.company_name = companyName;
+    if (userId)      updates.user_id      = userId;
+
+    if (Object.keys(updates).length > 0) {
+      await updateSession(session.id, updates as Parameters<typeof updateSession>[1]);
     }
 
-    return NextResponse.json({
-      ok: true,
-      sessionId: session.id,
-    });
+    return NextResponse.json({ ok: true, sessionId: session.id });
   } catch (error) {
     console.error('[sessions] Failed to create session:', error);
     return NextResponse.json(
