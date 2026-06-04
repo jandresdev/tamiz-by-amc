@@ -140,6 +140,9 @@ export async function POST(request: NextRequest) {
     const service = createServiceRoleClient();
 
     // Invite user via Supabase Auth (sends "Set password" email)
+    let userId = '';
+    let isRateLimited = false;
+
     const { data: inviteData, error: inviteError } = await service.auth.admin.inviteUserByEmail(
       contactEmail.trim().toLowerCase(),
       {
@@ -148,14 +151,30 @@ export async function POST(request: NextRequest) {
       }
     );
 
-    if (inviteError || !inviteData?.user) {
-      return NextResponse.json(
-        { ok: false, error: inviteError?.message ?? 'Error al invitar al usuario.' },
-        { status: 500 }
-      );
+    if (inviteError) {
+      if (inviteError.message.toLowerCase().includes('rate limit')) {
+        const { data: createData, error: createError } = await service.auth.admin.createUser({
+          email: contactEmail.trim().toLowerCase(),
+          password: 'TamizPassword123!',
+          email_confirm: true,
+          user_metadata: { contact_name: contactName.trim(), company_name: companyName.trim() }
+        });
+        if (createError || !createData?.user) {
+          return NextResponse.json({ ok: false, error: createError?.message ?? 'Error al crear usuario.' }, { status: 500 });
+        }
+        userId = createData.user.id;
+        isRateLimited = true;
+      } else {
+        return NextResponse.json(
+          { ok: false, error: inviteError.message },
+          { status: 500 }
+        );
+      }
+    } else if (inviteData?.user) {
+      userId = inviteData.user.id;
+    } else {
+      return NextResponse.json({ ok: false, error: 'Error desconocido al invitar.' }, { status: 500 });
     }
-
-    const userId = inviteData.user.id;
     const assignedRole = contactEmail.trim().toLowerCase() === SUPERADMIN_EMAIL.toLowerCase()
       ? 'superadmin'
       : role;
@@ -177,7 +196,13 @@ export async function POST(request: NextRequest) {
       console.error('[admin/users POST] Profile error:', profileError);
     }
 
-    return NextResponse.json({ ok: true, userId, message: 'Usuario invitado correctamente.' });
+    return NextResponse.json({ 
+      ok: true, 
+      userId, 
+      message: isRateLimited 
+        ? 'Usuario creado. Límite de correos excedido, clave temporal asignada: TamizPassword123!'
+        : 'Usuario invitado correctamente.' 
+    });
   } catch (error) {
     console.error('[admin/users POST] Error:', error);
     return NextResponse.json({ ok: false, error: 'Error interno' }, { status: 500 });
@@ -222,6 +247,9 @@ export async function PATCH(request: NextRequest) {
       }
 
       // Invite user via Supabase Auth
+      let userId = '';
+      let isRateLimited = false;
+
       const { data: inviteData, error: inviteError } = await service.auth.admin.inviteUserByEmail(
         req.contact_email,
         {
@@ -230,14 +258,30 @@ export async function PATCH(request: NextRequest) {
         }
       );
 
-      if (inviteError || !inviteData?.user) {
-        return NextResponse.json(
-          { ok: false, error: inviteError?.message ?? 'Error al enviar la invitación.' },
-          { status: 500 }
-        );
+      if (inviteError) {
+        if (inviteError.message.toLowerCase().includes('rate limit')) {
+          const { data: createData, error: createError } = await service.auth.admin.createUser({
+            email: req.contact_email,
+            password: 'TamizPassword123!',
+            email_confirm: true,
+            user_metadata: { contact_name: req.contact_name, company_name: req.company_name }
+          });
+          if (createError || !createData?.user) {
+            return NextResponse.json({ ok: false, error: createError?.message ?? 'Error al crear usuario.' }, { status: 500 });
+          }
+          userId = createData.user.id;
+          isRateLimited = true;
+        } else {
+          return NextResponse.json(
+            { ok: false, error: inviteError.message },
+            { status: 500 }
+          );
+        }
+      } else if (inviteData?.user) {
+        userId = inviteData.user.id;
+      } else {
+        return NextResponse.json({ ok: false, error: 'Error desconocido al invitar.' }, { status: 500 });
       }
-
-      const userId = inviteData.user.id;
 
       // Create profile as approved
       await service.from('tamiz_user_profiles').upsert({
@@ -259,7 +303,12 @@ export async function PATCH(request: NextRequest) {
         updated_at: new Date().toISOString(),
       }).eq('id', id);
 
-      return NextResponse.json({ ok: true, message: 'Usuario aprobado. Email de activación enviado.' });
+      return NextResponse.json({ 
+        ok: true, 
+        message: isRateLimited 
+          ? 'Usuario aprobado. Límite de correos excedido, clave temporal asignada: TamizPassword123!'
+          : 'Usuario aprobado. Email de activación enviado.' 
+      });
     }
 
     // ── REJECT ──────────────────────────────────────────────────────────────

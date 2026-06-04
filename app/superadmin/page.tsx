@@ -206,7 +206,7 @@ export default function SuperAdminPage() {
       });
       const data = await res.json();
       if (data.ok) {
-        showToast(successMsg);
+        showToast(data.message || successMsg);
         fetchUsers(filter);
       } else {
         showToast(data.error ?? 'Error al realizar la acción.', 'error');
