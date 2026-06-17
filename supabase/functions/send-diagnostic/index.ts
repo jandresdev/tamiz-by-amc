@@ -230,82 +230,118 @@ function buildHtml(p: HtmlOpts): string {
     qB2: { vinc: 'Usuario con vinculación económica', sinvinc: 'Sin vinculación económica', varios: 'Frontera atiende varios usuarios' },
   };
 
-  const matchColor = p.isMatch ? '#15926A' : '#D97706';
-  const matchText  = p.isMatch ? '✓ Coincide con intuición inicial' : '↗ Difiere de la intuición inicial';
+  const isSinsop = p.diagnosedLabel === 'Sin soporte regulatorio';
+  
+  let tone = 'stop';
+  if (p.diagnosedLabel && !isSinsop) tone = 'match';
+  else if (isSinsop) tone = 'no-match';
 
-  const answersRows = Object.entries(p.answers)
-    .filter(([k]) => k !== 'q0')
-    .map(([k, v]) => {
-      const qLabel = QUESTION_LABELS[k] || k;
-      let aLabel = String(Array.isArray(v) ? v.join(', ') : v);
+  let toneLabel = tone === 'match' ? 'ESQUEMA IDENTIFICADO' : tone === 'no-match' ? 'CALIFICACIÓN' : 'ANÁLISIS DETENIDO';
+  let titleColor = '#78350f'; 
+  let borderColor = '#fcd34d'; 
+  
+  if (tone === 'match') {
+      titleColor = '#065f46';
+      borderColor = '#6ee7b7';
+  } else if (tone === 'no-match') {
+      titleColor = '#78350f';
+      borderColor = '#fbbf24';
+  } else {
+      titleColor = '#7f1d1d';
+      borderColor = '#fca5a5';
+  }
 
-      if (typeof v === 'string' && ANSWER_LABELS[k] && ANSWER_LABELS[k][v]) {
+  let descHtml = '';
+  if (isSinsop) {
+     descHtml = `<p style="margin: 8px 0 0; color: #18171A; font-size: 13px; line-height: 1.5;">La combinación de respuestas excluye los esquemas de Autogeneración Remota, Producción Marginal Remota y Suministro de Energía. Se recomienda revisar la estructura de la operación con el equipo de AMC Principal antes de avanzar.</p>`;
+  } else if (!p.diagnosedLabel) {
+     descHtml = `<p style="margin: 8px 0 0; color: #18171A; font-size: 13px; line-height: 1.5;">Conforme a las reglas del clasificador, cuando la empresa evaluada es el único consumidor de la energía comprada el análisis se detiene en este punto. Se recomienda revisar la operación caso a caso con el equipo de AMC Principal antes de calificar el esquema.</p>`;
+  }
+
+  const answerKeys = ['q1', 'qA1', 'qA2', 'qA3', 'qB1', 'qB2'];
+  const summaryRowsHtml = answerKeys.map(k => {
+     const v = p.answers[k];
+     if (!v) return '';
+     
+     const qLabel = QUESTION_LABELS[k] || k;
+     let aLabel = String(Array.isArray(v) ? v.join(', ') : v);
+     if (typeof v === 'string' && ANSWER_LABELS[k] && ANSWER_LABELS[k][v]) {
         aLabel = ANSWER_LABELS[k][v];
-      } else if (Array.isArray(v)) {
+     } else if (Array.isArray(v)) {
         aLabel = v.map(val => (ANSWER_LABELS[k] && ANSWER_LABELS[k][val]) ? ANSWER_LABELS[k][val] : val).join(', ');
-      }
+     }
 
-      return `
+     return `
       <tr>
-        <td style="padding:9px 14px;color:#5F5C56;font-size:13px;border-bottom:1px solid #F0EDE8;width:42%;">${esc(qLabel)}</td>
-        <td style="padding:9px 14px;color:#18171A;font-size:13px;border-bottom:1px solid #F0EDE8;font-weight:500;">${esc(aLabel)}</td>
+        <td style="padding:12px 0;color:#5F5C56;font-size:13px;border-bottom:1px solid #F0EDE8;width:40%;">${esc(qLabel)}</td>
+        <td style="padding:12px 0;color:#18171A;font-size:13px;border-bottom:1px solid #F0EDE8;font-weight:700;text-align:right;">${esc(aLabel)}</td>
       </tr>`;
-    })
-    .join('');
+  }).join('');
 
-  const normativaSection = p.normativaText
-    ? `<div style="margin-top:18px;padding:14px 16px;background:#F5F4F0;border-radius:8px;border:1px solid #E6E3D8;">
-         <p style="margin:0 0 6px;font-size:11px;font-weight:700;color:#5F5C56;text-transform:uppercase;letter-spacing:1px;">Normativa adicional</p>
-         <p style="margin:0;font-size:13px;color:#18171A;line-height:1.6;">${esc(p.normativaText)}</p>
-       </div>`
-    : '';
+  const matchColor = p.isMatch ? '#15926A' : '#D97706';
+  const matchBgColor = p.isMatch ? '#DCF2EA' : '#FEF3C7';
+  const matchText  = p.isMatch ? 'Su intuición inicial coincide con el diagnóstico.' : 'Su intuición inicial difiere del diagnóstico. Esta diferencia conviene revisarla con el equipo de AMC Principal.';
 
-  const adjuntosSection = p.fileNames.length > 0
-    ? `<p style="margin:16px 0 4px;font-size:13px;color:#5F5C56;">
-         <strong>Archivos adjuntos:</strong> ${p.fileNames.map(esc).join(', ')}
-       </p>`
-    : '';
+  const fileHtml = p.fileNames.map(f => `
+      <tr>
+        <td style="padding:12px 0;color:#5F5C56;font-size:13px;border-bottom:1px solid #F0EDE8;width:40%;">Documento adjunto</td>
+        <td style="padding:12px 0;color:#18171A;font-size:13px;border-bottom:1px solid #F0EDE8;font-weight:700;text-align:right;">📎 ${esc(f)}</td>
+      </tr>`).join('');
 
   return `<!DOCTYPE html>
 <html lang="es">
 <head><meta charset="UTF-8"><title>Diagnóstico Tamiz</title></head>
-<body style="margin:0;padding:0;background:#F5F4F0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#F5F4F0;padding:40px 20px;">
-<tr><td align="center">
-<table width="580" cellpadding="0" cellspacing="0" style="background:#FFFFFF;border-radius:14px;overflow:hidden;box-shadow:0 2px 20px rgba(0,0,0,0.09);">
-  <tr><td style="background:#4A41B2;padding:28px 36px;">
-    <p style="margin:0;color:rgba(255,255,255,0.7);font-size:10px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;">AMC PRINCIPAL</p>
-    <p style="margin:5px 0 0;color:#FFFFFF;font-size:22px;font-weight:800;">Diagnóstico Tamiz</p>
-  </td></tr>
-  <tr><td style="padding:30px 36px 20px;">
-    <p style="margin:0 0 2px;color:#A09C94;font-size:11px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;">Empresa analizada</p>
-    <p style="margin:0 0 22px;color:#18171A;font-size:20px;font-weight:800;">${esc(p.companyName)}</p>
-    <table cellpadding="0" cellspacing="0" style="width:100%;background:#ECEAFB;border-radius:10px;margin-bottom:14px;">
-      <tr><td style="padding:16px 20px;">
-        <p style="margin:0 0 3px;color:#4A41B2;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;">Esquema Diagnosticado</p>
-        <p style="margin:0;color:#18171A;font-size:22px;font-weight:800;">${esc(p.diagnosedLabel)}</p>
-      </td></tr>
+<body style="margin:0;padding:20px;background:#F5F4F0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+<div style="max-width: 600px; margin: 0 auto;">
+  
+  <!-- Bloque 1: Calificación -->
+  <div style="background: #FFFFFF; border: 1px solid ${borderColor}; border-radius: 8px; padding: 24px; margin-bottom: 16px;">
+    <p style="margin: 0 0 4px; font-size: 11px; font-weight: 700; color: ${titleColor}; text-transform: uppercase; letter-spacing: 1px;">${esc(toneLabel)}</p>
+    <h2 style="margin: 0; font-size: 20px; font-weight: 800; color: ${titleColor};">${esc(p.diagnosedLabel || 'Análisis pausado')}</h2>
+    ${descHtml}
+  </div>
+
+  <!-- Bloque 2: Intuición vs Diagnóstico -->
+  <div style="background: #FFFFFF; border: 1px solid #E6E3D8; border-radius: 8px; padding: 24px; margin-bottom: 16px;">
+    <p style="margin: 0 0 16px; font-size: 11px; font-weight: 700; color: #5F5C56; text-transform: uppercase; letter-spacing: 1px;">SU INTUICIÓN VS. EL DIAGNÓSTICO</p>
+    
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 16px;">
+      <tr>
+        <td width="48%" valign="top" style="border: 1px solid #E6E3D8; border-radius: 6px; padding: 12px 16px;">
+          <p style="margin: 0 0 4px; font-size: 10px; font-weight: 700; color: #5F5C56; text-transform: uppercase;">Esquema que usted indicó</p>
+          <p style="margin: 0; font-size: 14px; font-weight: 700; color: #18171A;">${esc(p.initialLabel)}</p>
+        </td>
+        <td width="4%"></td>
+        <td width="48%" valign="top" style="border: 1px solid #E6E3D8; border-radius: 6px; padding: 12px 16px;">
+          <p style="margin: 0 0 4px; font-size: 10px; font-weight: 700; color: #5F5C56; text-transform: uppercase;">Esquema diagnosticado</p>
+          <p style="margin: 0; font-size: 14px; font-weight: 700; color: #18171A;">${esc(p.diagnosedLabel || 'Análisis pausado')}</p>
+        </td>
+      </tr>
     </table>
-    <p style="margin:0 0 6px;color:#5F5C56;font-size:13px;">Intuición inicial: <strong style="color:#18171A;">${esc(p.initialLabel)}</strong></p>
-    <span style="display:inline-block;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:600;background:${p.isMatch ? '#DCF2EA' : '#FEF3C7'};color:${matchColor};">${matchText}</span>
-  </td></tr>
-  <tr><td style="padding:0 36px 28px;">
-    <p style="margin:0 0 10px;color:#18171A;font-size:14px;font-weight:700;">Resumen de respuestas</p>
-    <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #E6E3D8;border-radius:8px;overflow:hidden;">${answersRows}</table>
-    ${normativaSection}
-    ${adjuntosSection}
-  </td></tr>
-  <tr><td style="padding:0 36px 28px;">
-    <p style="margin:0;font-size:12px;color:#A09C94;">
-      ID: <code style="background:#F5F4F0;padding:2px 6px;border-radius:4px;">${esc(p.diagId)}</code><br>
-      Contacto: ${esc(p.contactEmail)} · ${new Date().toLocaleString('es-CO', { timeZone: 'America/Bogota' })}
-    </p>
-  </td></tr>
-  <tr><td style="background:#F5F4F0;padding:18px 36px;border-top:1px solid #EDEAE0;">
-    <p style="margin:0;color:#A09C94;font-size:11px;">Tamiz es una herramienta propietaria de AMC Principal. Uso confidencial.</p>
-  </td></tr>
-</table>
-</td></tr>
-</table>
+
+    <div style="background: ${matchBgColor}; border: 1px solid ${matchColor}40; border-radius: 6px; padding: 12px 16px;">
+      <p style="margin: 0; font-size: 13px; color: ${matchColor}; font-weight: 500;">${esc(matchText)}</p>
+    </div>
+  </div>
+
+  <!-- Bloque 3: Resumen del diagnóstico -->
+  <div style="background: #FFFFFF; border: 1px solid #E6E3D8; border-radius: 8px; padding: 24px;">
+    <p style="margin: 0 0 16px; font-size: 11px; font-weight: 700; color: #5F5C56; text-transform: uppercase; letter-spacing: 1px;">RESUMEN DEL DIAGNÓSTICO</p>
+    
+    <table width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td style="padding:12px 0;color:#5F5C56;font-size:13px;border-bottom:1px solid #F0EDE8;width:40%;">Empresa evaluada</td>
+        <td style="padding:12px 0;color:#18171A;font-size:13px;border-bottom:1px solid #F0EDE8;font-weight:700;text-align:right;">${esc(p.companyName)}</td>
+      </tr>
+      <tr>
+        <td style="padding:12px 0;color:#5F5C56;font-size:13px;border-bottom:1px solid #F0EDE8;width:40%;">Correo de contacto</td>
+        <td style="padding:12px 0;color:#18171A;font-size:13px;border-bottom:1px solid #F0EDE8;font-weight:700;text-align:right;">${esc(p.contactEmail)}</td>
+      </tr>
+      ${summaryRowsHtml}
+      ${fileHtml}
+    </table>
+  </div>
+
+</div>
 </body></html>`;
 }
