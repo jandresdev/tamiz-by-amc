@@ -162,6 +162,7 @@ export default function QuestionnairePage() {
         sessionId: state.sessionId,
         normativaText,
         preliminaryScheme: state.preliminaryScheme,
+        answers: state.answers,
       }),
     });
     const data = await res.json();
