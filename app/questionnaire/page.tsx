@@ -214,6 +214,7 @@ export default function QuestionnairePage() {
       case 'resultFinal':
         return (
           <Result
+            sessionId={state.sessionId}
             companyName={companyName}
             contactEmail={contactEmail}
             diagnosedScheme={state.preliminaryScheme}

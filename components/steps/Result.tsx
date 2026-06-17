@@ -7,6 +7,7 @@ import { getResultTone, compareIntuition, ANSWER_LABELS, QUESTION_LABELS } from 
 import { useToast, ToastContainer } from '@/components/ui/Toast';
 
 interface ResultProps {
+  sessionId: string | null;
   companyName: string;
   contactEmail: string;
   diagnosedScheme: RegulatoryScheme | null;
@@ -18,6 +19,7 @@ interface ResultProps {
 }
 
 export default function Result({
+  sessionId,
   companyName,
   contactEmail,
   diagnosedScheme,
@@ -38,9 +40,13 @@ export default function Result({
 
   const label = companyName || 'X';
 
-  // Auto-send as soon as the result screen mounts
+  // Auto-send once sessionId is available (retry every 500ms if not yet ready)
   useEffect(() => {
     if (sent || sending) return;
+    if (!sessionId) {
+      // SessionId still loading — will re-run when parent re-renders with sessionId
+      return;
+    }
     const doSend = async () => {
       setSending(true);
       const lid = showLoading('Enviando diagnóstico a ops@amcprincipal.com...');
@@ -58,7 +64,7 @@ export default function Result({
     };
     doSend();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [sessionId]);
 
   // Summary rows
   const summaryRows: { label: string; value: string }[] = [];
