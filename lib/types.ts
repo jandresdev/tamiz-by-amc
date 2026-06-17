@@ -50,6 +50,7 @@ export interface TamizSession {
   id: string;
   company_name: string | null;
   contact_email: string;
+  user_id: string | null;          // Supabase Auth user ID (if authenticated)
   current_step: TamizStep;
   email_verified: boolean;
   verify_token: string | null;

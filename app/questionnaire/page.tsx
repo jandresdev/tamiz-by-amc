@@ -155,7 +155,11 @@ export default function QuestionnairePage() {
     const res = await fetch('/api/send-report', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sessionId: state.sessionId, normativaText }),
+      body: JSON.stringify({
+        sessionId: state.sessionId,
+        normativaText,
+        preliminaryScheme: state.preliminaryScheme,
+      }),
     });
     const data = await res.json();
     if (!data.ok) throw new Error(data.error ?? 'Error al enviar el diagnóstico.');

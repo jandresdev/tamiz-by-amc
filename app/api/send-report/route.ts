@@ -20,7 +20,11 @@ const OPS_EMAIL = 'ops@amcprincipal.com';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { sessionId, normativaText } = body as { sessionId: string; normativaText?: string };
+    const { sessionId, normativaText, preliminaryScheme: bodyScheme } = body as {
+      sessionId: string;
+      normativaText?: string;
+      preliminaryScheme?: string;
+    };
 
     if (!sessionId) {
       return NextResponse.json({ ok: false, error: 'Falta sessionId' }, { status: 400 });
@@ -28,11 +32,17 @@ export async function POST(request: NextRequest) {
 
     const session = await getSession(sessionId);
 
-    if (!session.email_verified) {
+    // For Supabase Auth users, email is verified at login — skip token check.
+    // Legacy non-auth sessions still require token verification.
+    const isAuthUser = !!session.user_id;
+    if (!isAuthUser && !session.email_verified) {
       return NextResponse.json({ ok: false, error: 'El correo no ha sido verificado' }, { status: 403 });
     }
 
-    if (!session.preliminary_scheme) {
+    // Accept scheme from body (client state) as primary, fall back to DB value
+    const resolvedScheme = (bodyScheme || session.preliminary_scheme) as RegulatoryScheme | null;
+
+    if (!resolvedScheme) {
       return NextResponse.json({ ok: false, error: 'No se ha determinado un esquema diagnóstico' }, { status: 400 });
     }
 
@@ -45,7 +55,7 @@ export async function POST(request: NextRequest) {
         session.company_name ?? 'Sin nombre',
         session.contact_email,
         String(session.answers_json?.q0 ?? 'NOSE'),
-        session.preliminary_scheme as RegulatoryScheme,
+        resolvedScheme as RegulatoryScheme,
         session.answers_json ?? {}
       );
     }

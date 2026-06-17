@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { RegulatoryScheme, TamizAnswers } from '@/lib/types';
 import { SCHEMES } from '@/lib/constants';
 import { getResultTone, compareIntuition, ANSWER_LABELS, QUESTION_LABELS } from '@/lib/logic';
@@ -38,22 +38,27 @@ export default function Result({
 
   const label = companyName || 'X';
 
-  const handleSend = async () => {
-    if (sending || sent) return;
-    setSending(true);
-    const lid = showLoading(`Enviando diagnóstico a ops@amcprincipal.com...`);
-    try {
-      await onSendReport(normativa || undefined);
-      dismiss(lid);
-      success('✓ Diagnóstico enviado correctamente');
-      setSent(true);
-    } catch (err: any) {
-      dismiss(lid);
-      error(err?.message ?? 'Error al enviar. Verifique su conexión e intente de nuevo.');
-    } finally {
-      setSending(false);
-    }
-  };
+  // Auto-send as soon as the result screen mounts
+  useEffect(() => {
+    if (sent || sending) return;
+    const doSend = async () => {
+      setSending(true);
+      const lid = showLoading('Enviando diagnóstico a ops@amcprincipal.com...');
+      try {
+        await onSendReport(normativa || undefined);
+        dismiss(lid);
+        success('✓ Diagnóstico enviado a ops@amcprincipal.com');
+        setSent(true);
+      } catch (err: any) {
+        dismiss(lid);
+        error(err?.message ?? 'Error al enviar. Verifique su conexión e intente de nuevo.');
+      } finally {
+        setSending(false);
+      }
+    };
+    doSend();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Summary rows
   const summaryRows: { label: string; value: string }[] = [];
@@ -112,7 +117,7 @@ export default function Result({
               onChange={(e) => setNormativa(e.target.value)}
               rows={4}
             />
-            <p className="normative-helper">Este campo es opcional y quedará registrado en el diagnóstico enviado.</p>
+            <p className="normative-helper">Este campo es opcional e informativo. El diagnóstico ya fue enviado automáticamente a ops@amcprincipal.com.</p>
           </div>
         )}
       </div>
@@ -154,28 +159,24 @@ export default function Result({
         ))}
       </div>
 
-      {/* CTA */}
-      <div className="send-cta-msg">
-        Envíe su diagnóstico a AMC Principal y acceda a los beneficios de contar con el soporte de una plataforma especializada.
+      {/* Send status indicator */}
+      <div className="send-status-row">
+        {sending && (
+          <span className="send-status sending">
+            <span className="spinner" aria-hidden="true" />
+            Enviando diagnóstico a ops@amcprincipal.com...
+          </span>
+        )}
+        {sent && !sending && (
+          <span className="send-status ok">✓ Diagnóstico enviado a ops@amcprincipal.com</span>
+        )}
+        {!sending && !sent && (
+          <span className="send-status pending">Preparando envío...</span>
+        )}
       </div>
 
       {/* Action buttons */}
       <div className="actions-row">
-        <button
-          type="button"
-          className={`action-btn primary${sending ? ' loading' : ''}`}
-          onClick={handleSend}
-          disabled={sending || sent}
-        >
-          {sending ? (
-            <><span className="spinner" aria-hidden="true" />Enviando diagnóstico...</>
-          ) : sent ? (
-            '✓ Diagnóstico enviado'
-          ) : (
-            '📤 Enviar diagnóstico'
-          )}
-        </button>
-
         <button
           type="button"
           className="action-btn secondary"
