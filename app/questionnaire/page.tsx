@@ -34,16 +34,18 @@ export default function QuestionnairePage() {
 
     async function loadUser() {
       const supabase = createBrowserSupabaseClient();
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user }, error: userErr } = await supabase.auth.getUser();
+      console.log('[questionnaire] auth.getUser:', user?.id ?? null, userErr?.message ?? null);
       if (!user || cancelled) return;
 
       // Get profile for company name
-      const { data: profile } = await supabase
+      const { data: profile, error: profileErr } = await supabase
         .from('tamiz_user_profiles')
         .select('company_name, contact_email')
         .eq('id', user.id)
         .single();
 
+      console.log('[questionnaire] profile:', profile, profileErr?.message ?? null);
       if (!profile || cancelled) return;
 
       // Create or recover a tamiz_session for this user
@@ -58,6 +60,7 @@ export default function QuestionnairePage() {
       });
       const sessData = await res.json().catch(() => ({}));
       const sessionId = sessData.sessionId ?? null;
+      console.log('[questionnaire] sessionId:', sessionId, sessData);
 
       if (!cancelled) {
         initFromUser(profile.company_name, profile.contact_email, sessionId ?? undefined);

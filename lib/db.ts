@@ -11,16 +11,16 @@ import type {
 // TAMIZ SESSIONS
 // ============================================================================
 
-export async function createSession(email: string): Promise<TamizSession> {
+export async function createSession(email: string, companyName: string = 'Sin nombre'): Promise<TamizSession> {
   const client = await createClient();
   const { data, error } = await client
     .from('tamiz_sessions')
     .insert({
       contact_email: email,
-      current_step: 'qName',
-      email_verified: false,
-      answers_json: {},
-      active_schemes: ['AUTOGEN', 'PMARG', 'SUMIN', 'VENTAEXC', 'SINSOP'],
+      company_name: companyName,
+      contact_name: 'Sin nombre',
+      status: 'active',
+      current_step: 'q0',
     })
     .select()
     .single();

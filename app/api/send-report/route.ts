@@ -20,10 +20,11 @@ const OPS_EMAIL = 'ops@amcprincipal.com';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { sessionId, normativaText, preliminaryScheme: bodyScheme } = body as {
+    const { sessionId, normativaText, preliminaryScheme: bodyScheme, answers } = body as {
       sessionId: string;
       normativaText?: string;
       preliminaryScheme?: string;
+      answers?: any;
     };
 
     if (!sessionId) {
@@ -54,9 +55,9 @@ export async function POST(request: NextRequest) {
         sessionId,
         session.company_name ?? 'Sin nombre',
         session.contact_email,
-        String(session.answers_json?.q0 ?? 'NOSE'),
+        String(answers?.q0 ?? session.answers_json?.q0 ?? 'NOSE'),
         resolvedScheme as RegulatoryScheme,
-        session.answers_json ?? {}
+        answers ?? session.answers_json ?? {}
       );
     }
 
@@ -81,7 +82,7 @@ export async function POST(request: NextRequest) {
     // ── 4. Llamar Edge Function send-diagnostic (Gmail SMTP) ─────────────────
     const supabase = await createClient();
     const { data: fnData, error: fnError } = await supabase.functions.invoke('send-diagnostic', {
-      body: { sessionId },
+      body: { sessionId, answers, preliminaryScheme: resolvedScheme, normativaText },
     });
 
     if (fnError) {

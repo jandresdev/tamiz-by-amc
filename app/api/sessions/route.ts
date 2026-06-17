@@ -17,10 +17,10 @@ export async function POST(request: NextRequest) {
     }
 
     const sessionEmail = email || `pending-${Date.now()}@tamiz.local`;
-    const session = await createSession(sessionEmail);
+    const session = await createSession(sessionEmail, companyName);
 
     const updates: Record<string, unknown> = {};
-    if (companyName) updates.company_name = companyName;
+    if (userId)      updates.user_id      = userId;
     if (userId)      updates.user_id      = userId;
 
     if (Object.keys(updates).length > 0) {

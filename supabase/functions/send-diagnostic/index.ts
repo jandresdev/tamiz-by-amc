@@ -43,7 +43,12 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const { sessionId } = await req.json() as { sessionId: string };
+    const { sessionId, answers, preliminaryScheme, normativaText } = await req.json() as { 
+      sessionId: string;
+      answers?: any;
+      preliminaryScheme?: string;
+      normativaText?: string;
+    };
 
     if (!sessionId) {
       return json({ ok: false, error: 'Falta sessionId' }, 400);
@@ -105,9 +110,12 @@ Deno.serve(async (req: Request) => {
     }
 
     // ── 4. Construir email ───────────────────────────────────────────────────
-    const diagnosedScheme  = diagnostico?.diagnosed_scheme ?? session.preliminary_scheme ?? '';
+    const diagnosedScheme  = diagnostico?.diagnosed_scheme ?? preliminaryScheme ?? session.preliminary_scheme ?? '';
     const diagnosedLabel   = SCHEMES[diagnosedScheme] ?? diagnosedScheme;
-    const initialIntuition = String((session.answers_json as Record<string, string>)?.q0 ?? 'NOSE');
+    
+    // Answers fallbacks: use answers from payload if present, else fallback
+    const resolvedAnswers = answers || session.answers_json || {};
+    const initialIntuition = String(resolvedAnswers?.q0 ?? 'NOSE');
     const initialLabel     = initialIntuition === 'NOSE'
       ? 'No estaba seguro'
       : (SCHEMES[initialIntuition] ?? initialIntuition);
@@ -122,8 +130,8 @@ Deno.serve(async (req: Request) => {
       initialLabel,
       diagnosedLabel,
       isMatch,
-      answers:       (session.answers_json ?? {}) as Record<string, string | string[]>,
-      normativaText: session.normativa_user_text as string | null ?? undefined,
+      answers:       resolvedAnswers as Record<string, string | string[]>,
+      normativaText: normativaText ?? (session.normativa_user_text as string | null ?? undefined),
       fileNames:     attachments.map(a => a.filename),
     });
 
