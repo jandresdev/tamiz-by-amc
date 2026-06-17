@@ -212,16 +212,45 @@ interface HtmlOpts {
 }
 
 function buildHtml(p: HtmlOpts): string {
+  const QUESTION_LABELS: Record<string, string> = {
+    q1:  '¿Produce o compra?',
+    qA1: '¿Vendedor vinculado económico?',
+    qA2: '¿Vendedor es ESP?',
+    qA3: '¿Único consumidor?',
+    qB1: 'Naturaleza de la Frontera',
+    qB2: 'Vinculación del usuario de la Frontera',
+  };
+
+  const ANSWER_LABELS: Record<string, Record<string, string>> = {
+    q1:  { produce: 'Produce la energía', compra: 'Compra la energía' },
+    qA1: { si: 'Sí — vinculado económico', no: 'No — no es vinculado económico' },
+    qA2: { si: 'Sí — Empresa de Servicios Públicos', no: 'No — no es ESP' },
+    qA3: { si: 'Sí — único consumidor', no: 'No — hay más consumidores' },
+    qB1: { propia: 'Frontera propia / EC en RUT, registrada ante XM', tercero: 'Frontera/registro a nombre de un tercero' },
+    qB2: { vinc: 'Usuario con vinculación económica', sinvinc: 'Sin vinculación económica', varios: 'Frontera atiende varios usuarios' },
+  };
+
   const matchColor = p.isMatch ? '#15926A' : '#D97706';
   const matchText  = p.isMatch ? '✓ Coincide con intuición inicial' : '↗ Difiere de la intuición inicial';
 
   const answersRows = Object.entries(p.answers)
     .filter(([k]) => k !== 'q0')
-    .map(([k, v]) => `
+    .map(([k, v]) => {
+      const qLabel = QUESTION_LABELS[k] || k;
+      let aLabel = String(Array.isArray(v) ? v.join(', ') : v);
+
+      if (typeof v === 'string' && ANSWER_LABELS[k] && ANSWER_LABELS[k][v]) {
+        aLabel = ANSWER_LABELS[k][v];
+      } else if (Array.isArray(v)) {
+        aLabel = v.map(val => (ANSWER_LABELS[k] && ANSWER_LABELS[k][val]) ? ANSWER_LABELS[k][val] : val).join(', ');
+      }
+
+      return `
       <tr>
-        <td style="padding:9px 14px;color:#5F5C56;font-size:13px;border-bottom:1px solid #F0EDE8;width:42%;">${esc(k)}</td>
-        <td style="padding:9px 14px;color:#18171A;font-size:13px;border-bottom:1px solid #F0EDE8;font-weight:500;">${esc(Array.isArray(v) ? v.join(', ') : v)}</td>
-      </tr>`)
+        <td style="padding:9px 14px;color:#5F5C56;font-size:13px;border-bottom:1px solid #F0EDE8;width:42%;">${esc(qLabel)}</td>
+        <td style="padding:9px 14px;color:#18171A;font-size:13px;border-bottom:1px solid #F0EDE8;font-weight:500;">${esc(aLabel)}</td>
+      </tr>`;
+    })
     .join('');
 
   const normativaSection = p.normativaText
