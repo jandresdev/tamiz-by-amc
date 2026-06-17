@@ -143,7 +143,7 @@ Deno.serve(async (req: Request) => {
     }
 
     const resend = new Resend(apiKey);
-    const from   = Deno.env.get('RESEND_FROM') ?? 'onboarding@resend.dev';
+    const from   = Deno.env.get('RESEND_FROM') ?? 'noreply@amcprincipal.com';
 
     const { data: emailData, error: emailErr } = await resend.emails.send({
       from:        `Tamiz AMC Principal <${from}>`,

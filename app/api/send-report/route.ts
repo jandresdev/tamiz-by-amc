@@ -80,20 +80,32 @@ export async function POST(request: NextRequest) {
     }
 
     // ── 4. Llamar Edge Function send-diagnostic (Gmail SMTP) ─────────────────
-    const supabase = await createClient();
-    const { data: fnData, error: fnError } = await supabase.functions.invoke('send-diagnostic', {
-      body: { sessionId, answers, preliminaryScheme: resolvedScheme, normativaText },
+    const fnUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/send-diagnostic`;
+    const fnRes = await fetch(fnUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`
+      },
+      body: JSON.stringify({ sessionId, answers, preliminaryScheme: resolvedScheme, normativaText }),
     });
 
-    if (fnError) {
-      console.error('[send-report] Edge function error:', fnError);
-      // El diagnóstico ya quedó guardado en DB aunque falle el email
+    const fnText = await fnRes.text();
+    console.log('[send-report] Edge Function response:', fnRes.status, fnText);
+    
+    let fnData: any = {};
+    try {
+      fnData = JSON.parse(fnText);
+    } catch(e) {}
+
+    if (!fnRes.ok) {
+      console.error('[send-report] Edge Function error:', fnText);
       return NextResponse.json({
         ok:            false,
         diagnosticoId: diagnostico.id,
         sentToOps:     false,
-        message:       'Diagnóstico guardado en Supabase. Fallo el envío de email (verifica los secrets SMTP en Edge Functions).',
-        error:         fnError.message,
+        message:       'Diagnóstico guardado. Fallo el envío de email.',
+        error:         fnText,
       });
     }
 
