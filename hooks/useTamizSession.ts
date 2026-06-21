@@ -24,6 +24,14 @@ export interface TimeoutWarning {
   minutesLeft: number;
 }
 
+/** Shape of a resumed tamiz_sessions row, as returned by POST /api/sessions */
+export interface ResumedSession {
+  current_step: TamizStep;
+  answers_json: TamizAnswers;
+  active_schemes: RegulatoryScheme[];
+  history_json: TamizStep[];
+}
+
 const INITIAL_STATE: SessionState = {
   sessionId: null,
   companyName: '',
@@ -124,14 +132,27 @@ export function useTamizSession() {
 
   /**
    * Initialise session identity from the authenticated user profile.
-   * Called once when the questionnaire page mounts.
+   * Called once when the questionnaire page mounts. If `resumed` is given
+   * (an in-progress session was found server-side), restores step/answers
+   * progress instead of starting over at q0.
    */
-  const initFromUser = useCallback((companyName: string, contactEmail: string, sessionId?: string) => {
+  const initFromUser = useCallback((
+    companyName: string,
+    contactEmail: string,
+    sessionId?: string,
+    resumed?: ResumedSession | null
+  ) => {
     setState((prev) => ({
       ...prev,
       companyName,
       contactEmail,
       sessionId: sessionId ?? prev.sessionId,
+      ...(resumed ? {
+        currentStep: resumed.current_step,
+        answers: resumed.answers_json ?? {},
+        activeSchemes: resumed.active_schemes?.length ? resumed.active_schemes : prev.activeSchemes,
+        history: resumed.history_json ?? [],
+      } : {}),
     }));
     touch();
   }, [touch]);

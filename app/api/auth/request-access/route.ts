@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
       }
 
       // Create profile as superadmin
-      await admin.from('tamiz_user_profiles').upsert({
+      const { error: profileError } = await admin.from('tamiz_user_profiles').upsert({
         id:            inviteData.user.id,
         contact_name:  contactName.trim(),
         company_name:  companyName.trim(),
@@ -87,6 +87,14 @@ export async function POST(request: NextRequest) {
         approved_by:   'system',
         approved_at:   new Date().toISOString(),
       });
+
+      if (profileError) {
+        console.error('[request-access] Superadmin profile error:', profileError);
+        return NextResponse.json(
+          { ok: false, error: `Cuenta de auth creada pero falló la creación del perfil: ${profileError.message}` },
+          { status: 500 }
+        );
+      }
 
       return NextResponse.json({ ok: true, message: 'Cuenta SuperAdmin creada. Revise su email para establecer la contraseña.' });
     }

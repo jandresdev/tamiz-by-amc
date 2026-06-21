@@ -1,4 +1,5 @@
-import { createClient } from './supabase.server';
+import { createClient, createServiceRoleClient } from './supabase.server';
+import { SESSION_TIMEOUT_MINUTES } from './constants';
 import type {
   TamizSession,
   TamizFile,
@@ -10,6 +11,32 @@ import type {
 // ============================================================================
 // TAMIZ SESSIONS
 // ============================================================================
+
+/**
+ * Finds an in-progress session to resume for this user (not completed, active
+ * within the session timeout window). Returns null if none — caller should
+ * create a fresh session in that case.
+ */
+export async function getActiveSessionForUser(
+  userId: string,
+  timeoutMinutes: number = SESSION_TIMEOUT_MINUTES
+): Promise<TamizSession | null> {
+  const client = await createClient();
+  const cutoff = new Date(Date.now() - timeoutMinutes * 60_000).toISOString();
+
+  const { data, error } = await client
+    .from('tamiz_sessions')
+    .select('*')
+    .eq('user_id', userId)
+    .is('completed_at', null)
+    .gte('last_activity', cutoff)
+    .order('last_activity', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) throw new Error(`Failed to look up active session: ${error.message}`);
+  return data ?? null;
+}
 
 export async function createSession(email: string, companyName: string = 'Sin nombre'): Promise<TamizSession> {
   const client = await createClient();
@@ -58,61 +85,6 @@ export async function updateSession(
 
   if (error) throw new Error(`Failed to update session: ${error.message}`);
   return data;
-}
-
-export async function setVerifyToken(
-  sessionId: string,
-  token: string,
-  expiryMinutes: number = 10
-): Promise<void> {
-  const expiryTime = new Date();
-  expiryTime.setMinutes(expiryTime.getMinutes() + expiryMinutes);
-
-  await updateSession(sessionId, {
-    verify_token: token,
-    verify_expiry: expiryTime.toISOString(),
-    verify_attempts: 0,
-  } as Partial<TamizSession>);
-}
-
-export async function verifyEmailToken(
-  sessionId: string,
-  token: string
-): Promise<boolean> {
-  const session = await getSession(sessionId);
-
-  if (!session.verify_token || !session.verify_expiry) {
-    return false;
-  }
-
-  // Check expiry
-  const now = new Date();
-  const expiry = new Date(session.verify_expiry);
-  if (now > expiry) {
-    return false;
-  }
-
-  // Check attempts
-  if (session.verify_attempts >= 5) {
-    return false;
-  }
-
-  // Check token
-  if (session.verify_token !== token) {
-    await updateSession(sessionId, {
-      verify_attempts: session.verify_attempts + 1,
-    } as Partial<TamizSession>);
-    return false;
-  }
-
-  // Token is valid - mark as verified
-  await updateSession(sessionId, {
-    email_verified: true,
-    verify_token: null,
-    verify_expiry: null,
-  } as Partial<TamizSession>);
-
-  return true;
 }
 
 export async function updateSessionAnswer(
@@ -318,8 +290,11 @@ export async function markDiagnosticoSent(
 // UTILITIES
 // ============================================================================
 
+// Runs as a system/cron job (see app/api/cron/cleanup-files), not on behalf of
+// any single user — needs the service-role client to see expired files across
+// every session, since RLS now scopes tamiz_files to its owning session.
 export async function cleanupExpiredFiles(): Promise<number> {
-  const client = await createClient();
+  const client = createServiceRoleClient();
   const now = new Date().toISOString();
 
   const { data: expiredFiles, error: fetchError } = await client
@@ -344,7 +319,11 @@ export async function cleanupExpiredFiles(): Promise<number> {
     }
 
     // Delete record
-    await deleteFileRecord(file.id);
+    const { error: delError } = await client.from('tamiz_files').delete().eq('id', file.id);
+    if (delError) {
+      console.error('Failed to delete file record:', delError);
+      continue;
+    }
     deletedCount++;
   }
 

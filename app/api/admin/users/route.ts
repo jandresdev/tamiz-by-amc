@@ -1,8 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { randomBytes } from 'crypto';
 import { createClient, createServiceRoleClient } from '@/lib/supabase.server';
 import { isSuperAdmin, getCurrentUser } from '@/lib/auth';
 
 const SUPERADMIN_EMAIL = process.env.SUPERADMIN_EMAIL || 'ops@amcprincipal.com';
+
+// Used only as a fallback when Supabase's invite email is rate-limited —
+// generates a unique, unguessable temporary password per user instead of a
+// shared static one.
+function generateTempPassword(): string {
+  return `Tz${randomBytes(9).toString('base64url')}!`;
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Auth guard helper
@@ -151,11 +159,13 @@ export async function POST(request: NextRequest) {
       }
     );
 
+    let tempPassword = '';
     if (inviteError) {
       if (inviteError.message.toLowerCase().includes('rate limit')) {
+        tempPassword = generateTempPassword();
         const { data: createData, error: createError } = await service.auth.admin.createUser({
           email: contactEmail.trim().toLowerCase(),
-          password: 'TamizPassword123!',
+          password: tempPassword,
           email_confirm: true,
           user_metadata: { contact_name: contactName.trim(), company_name: companyName.trim() }
         });
@@ -194,14 +204,19 @@ export async function POST(request: NextRequest) {
 
     if (profileError) {
       console.error('[admin/users POST] Profile error:', profileError);
+      return NextResponse.json({
+        ok: false,
+        userId,
+        error: `Usuario de auth creado (${userId}) pero falló la creación del perfil: ${profileError.message}. El usuario no aparecerá en el panel hasta resolverlo.`,
+      }, { status: 500 });
     }
 
-    return NextResponse.json({ 
-      ok: true, 
-      userId, 
-      message: isRateLimited 
-        ? 'Usuario creado. Límite de correos excedido, clave temporal asignada: TamizPassword123!'
-        : 'Usuario invitado correctamente.' 
+    return NextResponse.json({
+      ok: true,
+      userId,
+      message: isRateLimited
+        ? `Usuario creado. Límite de correos excedido, clave temporal asignada: ${tempPassword}`
+        : 'Usuario invitado correctamente.'
     });
   } catch (error) {
     console.error('[admin/users POST] Error:', error);
@@ -258,11 +273,13 @@ export async function PATCH(request: NextRequest) {
         }
       );
 
+      let tempPassword = '';
       if (inviteError) {
         if (inviteError.message.toLowerCase().includes('rate limit')) {
+          tempPassword = generateTempPassword();
           const { data: createData, error: createError } = await service.auth.admin.createUser({
             email: req.contact_email,
-            password: 'TamizPassword123!',
+            password: tempPassword,
             email_confirm: true,
             user_metadata: { contact_name: req.contact_name, company_name: req.company_name }
           });
@@ -284,7 +301,7 @@ export async function PATCH(request: NextRequest) {
       }
 
       // Create profile as approved
-      await service.from('tamiz_user_profiles').upsert({
+      const { error: profileError } = await service.from('tamiz_user_profiles').upsert({
         id:            userId,
         contact_name:  req.contact_name,
         company_name:  req.company_name,
@@ -296,6 +313,14 @@ export async function PATCH(request: NextRequest) {
         approved_at:   new Date().toISOString(),
       });
 
+      if (profileError) {
+        console.error('[admin/users PATCH approve] Profile error:', profileError);
+        return NextResponse.json({
+          ok: false,
+          error: `Usuario de auth creado (${userId}) pero falló la creación del perfil: ${profileError.message}. La solicitud sigue pendiente.`,
+        }, { status: 500 });
+      }
+
       // Mark request as approved
       await service.from('tamiz_access_requests').update({
         status:     'approved',
@@ -303,11 +328,11 @@ export async function PATCH(request: NextRequest) {
         updated_at: new Date().toISOString(),
       }).eq('id', id);
 
-      return NextResponse.json({ 
-        ok: true, 
-        message: isRateLimited 
-          ? 'Usuario aprobado. Límite de correos excedido, clave temporal asignada: TamizPassword123!'
-          : 'Usuario aprobado. Email de activación enviado.' 
+      return NextResponse.json({
+        ok: true,
+        message: isRateLimited
+          ? `Usuario aprobado. Límite de correos excedido, clave temporal asignada: ${tempPassword}`
+          : 'Usuario aprobado. Email de activación enviado.'
       });
     }
 

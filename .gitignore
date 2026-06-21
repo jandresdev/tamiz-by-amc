@@ -46,3 +46,4 @@ dev-output.log
 
 # claude session files
 .claude/
+memory/

@@ -101,17 +101,6 @@ export interface ApiResponse<T = any> {
   error?: string;
 }
 
-export interface SendTokenRequest {
-  sessionId: string;
-  email: string;
-  companyName: string;
-}
-
-export interface VerifyEmailRequest {
-  sessionId: string;
-  token: string;
-}
-
 export interface SaveAnswerRequest {
   sessionId: string;
   step: TamizStep;

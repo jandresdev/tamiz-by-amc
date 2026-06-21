@@ -34,21 +34,19 @@ export default function QuestionnairePage() {
 
     async function loadUser() {
       const supabase = createBrowserSupabaseClient();
-      const { data: { user }, error: userErr } = await supabase.auth.getUser();
-      console.log('[questionnaire] auth.getUser:', user?.id ?? null, userErr?.message ?? null);
+      const { data: { user } } = await supabase.auth.getUser();
       if (!user || cancelled) return;
 
       // Get profile for company name
-      const { data: profile, error: profileErr } = await supabase
+      const { data: profile } = await supabase
         .from('tamiz_user_profiles')
         .select('company_name, contact_email')
         .eq('id', user.id)
         .single();
 
-      console.log('[questionnaire] profile:', profile, profileErr?.message ?? null);
       if (!profile || cancelled) return;
 
-      // Create or recover a tamiz_session for this user
+      // Create or resume a tamiz_session for this user
       const res = await fetch('/api/sessions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -60,10 +58,10 @@ export default function QuestionnairePage() {
       });
       const sessData = await res.json().catch(() => ({}));
       const sessionId = sessData.sessionId ?? null;
-      console.log('[questionnaire] sessionId:', sessionId, sessData);
+      const resumed = sessData.resumed ? sessData.session : null;
 
       if (!cancelled) {
-        initFromUser(profile.company_name, profile.contact_email, sessionId ?? undefined);
+        initFromUser(profile.company_name, profile.contact_email, sessionId ?? undefined, resumed);
         if (sessionId) setSessionId(sessionId);
       }
     }
@@ -116,41 +114,63 @@ export default function QuestionnairePage() {
     }
   }, [state.sessionId]);
 
+  // ── Persist answer + progress server-side (best-effort, non-blocking) ───────
+  const saveAnswerAsync = useCallback((
+    step: string,
+    answer: string | string[],
+    activeSchemes: RegulatoryScheme[],
+    nextStep: string
+  ) => {
+    if (!state.sessionId) return;
+    fetch('/api/answers', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sessionId: state.sessionId, step, answer, activeSchemes, nextStep }),
+    }).catch((e) => console.warn('[answers] Non-critical save error:', e));
+  }, [state.sessionId]);
+
   // ── Step handlers ────────────────────────────────────────────────────────────
 
   const handleQ0 = (value: string) => {
+    saveAnswerAsync('q0', value, state.activeSchemes, 'q1');
     advanceTo('q1', { q0: value });
   };
 
   const handleQ1 = (value: string, file: File | null) => {
     if (file) { setFile('q1', file); uploadFileAsync('q1', file); }
     const { nextStep, keepSchemes, preliminaryScheme } = routeNextStep('q1', value, state.answers);
+    saveAnswerAsync('q1', value, keepSchemes, nextStep);
     advanceTo(nextStep, { q1: value }, keepSchemes, preliminaryScheme);
   };
 
   const handleQA1 = (value: string) => {
     const { nextStep, keepSchemes, preliminaryScheme } = routeNextStep('qA1', value, state.answers);
+    saveAnswerAsync('qA1', value, keepSchemes, nextStep);
     advanceTo(nextStep, { qA1: value }, keepSchemes, preliminaryScheme);
   };
 
   const handleQA2 = (value: string) => {
     const { nextStep, keepSchemes, preliminaryScheme } = routeNextStep('qA2', value, { ...state.answers, qA2: value });
+    saveAnswerAsync('qA2', value, keepSchemes, nextStep);
     advanceTo(nextStep, { qA2: value }, keepSchemes, preliminaryScheme);
   };
 
   const handleQA3 = (value: string, consumers: string) => {
     const { nextStep, keepSchemes, preliminaryScheme } = routeNextStep('qA3', value, state.answers);
+    saveAnswerAsync('qA3', value, keepSchemes, nextStep);
     advanceTo(nextStep, { qA3: value, qA3consumers: consumers }, keepSchemes, preliminaryScheme);
   };
 
   const handleQB1 = (value: string, file: File | null) => {
     if (file) { setFile('qB1', file); uploadFileAsync('qB1', file); }
     const { nextStep, keepSchemes, preliminaryScheme } = routeNextStep('qB1', value, state.answers);
+    saveAnswerAsync('qB1', value, keepSchemes, nextStep);
     advanceTo(nextStep, { qB1: value }, keepSchemes, preliminaryScheme);
   };
 
   const handleQB2 = (value: string) => {
     const { nextStep, keepSchemes, preliminaryScheme } = routeNextStep('qB2', value, state.answers);
+    saveAnswerAsync('qB2', value, keepSchemes, nextStep);
     advanceTo(nextStep, { qB2: value }, keepSchemes, preliminaryScheme);
   };
 

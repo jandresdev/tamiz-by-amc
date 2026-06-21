@@ -105,11 +105,6 @@ export const MAX_TOTAL_FILES_SIZE = 50 * 1024 * 1024; // 50MB for session
 
 export const FILE_EXPIRY_DAYS = 7;
 
-export const BREVO_EMAIL_CONFIG = {
-  sender: process.env.BREVO_SENDER_EMAIL || 'noreply@amcprincipal.com',
-  senderName: process.env.BREVO_SENDER_NAME || 'AMC Principal',
-};
-
 export const STEP_ORDER: Record<string, number> = {
   q0: 1,
   q1: 2,
