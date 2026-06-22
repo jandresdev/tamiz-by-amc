@@ -45,15 +45,27 @@ function AccessPageContent() {
 
   // Handle Supabase invite/recovery magic links
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const hash = window.location.hash;
-      if (hash && (hash.includes('type=invite') || hash.includes('type=recovery'))) {
+    if (typeof window === 'undefined') return;
+    const hash = window.location.hash;
+    
+    // Listen for auth state changes to confirm the session is valid
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY' || ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session && hash && (hash.includes('type=invite') || hash.includes('type=recovery')))) {
         setTab('update-password');
         setMessage('Bienvenido. Por favor, asigne una contraseña para su cuenta.');
         setMsgType('info');
+      } else if (event === 'INITIAL_SESSION' && !session && hash && (hash.includes('type=invite') || hash.includes('type=recovery'))) {
+        // Token was likely already consumed or expired
+        setTab('login');
+        setMessage('El enlace de invitación ya fue utilizado o ha expirado. Por favor inicie sesión o solicite uno nuevo.');
+        setMsgType('error');
       }
-    }
-  }, []);
+    });
+
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
+  }, [supabase.auth]);
 
   const showMsg = (text: string, type: 'success' | 'error' | 'info') => {
     setMessage(text);
