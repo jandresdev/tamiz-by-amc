@@ -50,14 +50,20 @@ function AccessPageContent() {
     
     // Listen for auth state changes to confirm the session is valid
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('Auth event:', event, 'Session:', !!session);
+      
       if (event === 'PASSWORD_RECOVERY' || ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session && hash && (hash.includes('type=invite') || hash.includes('type=recovery')))) {
         setTab('update-password');
         setMessage('Bienvenido. Por favor, asigne una contraseña para su cuenta.');
         setMsgType('info');
+        // Clear hash so it doesn't re-trigger on refresh
+        if (window.history.replaceState) {
+          window.history.replaceState(null, '', window.location.pathname + window.location.search);
+        }
       } else if (event === 'INITIAL_SESSION' && !session && hash && (hash.includes('type=invite') || hash.includes('type=recovery'))) {
         // Token was likely already consumed or expired
         setTab('login');
-        setMessage('El enlace de invitación ya fue utilizado o ha expirado. Por favor inicie sesión o solicite uno nuevo.');
+        setMessage('El enlace de invitación ya fue utilizado o ha expirado. Por favor inicie sesión o solicite uno nuevo al administrador.');
         setMsgType('error');
       }
     });
@@ -110,10 +116,18 @@ function AccessPageContent() {
     e.preventDefault();
     if (!newPass || loading) return;
     if (submitRef.current) return;
+    
     submitRef.current = true;
     setLoading(true);
     setMessage('');
+    
     try {
+      // Force refresh session check
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error('La sesión de invitación se ha perdido o el enlace expiró. Por favor, solicite una nueva invitación.');
+      }
+
       const { error } = await supabase.auth.updateUser({ password: newPass });
       if (error) throw error;
       
@@ -125,6 +139,11 @@ function AccessPageContent() {
       showMsg(err.message || 'Error al actualizar contraseña.', 'error');
       submitRef.current = false;
       setLoading(false);
+      
+      // Si la sesión se perdió, volvemos a login
+      if (err.message.includes('sesión') || err.message.includes('Auth session missing')) {
+        setTimeout(() => setTab('login'), 3000);
+      }
     }
   };
 
