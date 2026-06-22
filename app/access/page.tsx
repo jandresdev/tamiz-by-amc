@@ -4,7 +4,7 @@ import { useState, useEffect, Suspense, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { createBrowserSupabaseClient } from '@/lib/supabase.client';
 
-type Tab = 'login' | 'request';
+type Tab = 'login' | 'request' | 'update-password';
 
 function AccessPageContent() {
   const searchParams = useSearchParams();
@@ -21,6 +21,7 @@ function AccessPageContent() {
   const [loginEmail, setLoginEmail]       = useState('');
   const [loginPass, setLoginPass]         = useState('');
   const [showPass, setShowPass]           = useState(false);
+  const [newPass, setNewPass]             = useState('');
 
   // Request fields
   const [reqName, setReqName]       = useState('');
@@ -41,6 +42,18 @@ function AccessPageContent() {
       setMsgType('error');
     }
   }, [statusParam]);
+
+  // Handle Supabase invite/recovery magic links
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const hash = window.location.hash;
+      if (hash && (hash.includes('type=invite') || hash.includes('type=recovery'))) {
+        setTab('update-password');
+        setMessage('Bienvenido. Por favor, asigne una contraseña para su cuenta.');
+        setMsgType('info');
+      }
+    }
+  }, []);
 
   const showMsg = (text: string, type: 'success' | 'error' | 'info') => {
     setMessage(text);
@@ -75,6 +88,29 @@ function AccessPageContent() {
       window.location.href = '/access';
     } catch {
       showMsg('Error al iniciar sesión. Intente de nuevo.', 'error');
+      submitRef.current = false;
+      setLoading(false);
+    }
+  };
+
+  // ── Update Password (Invite / Recovery) ────────────────────────────────────
+  const handleUpdatePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newPass || loading) return;
+    if (submitRef.current) return;
+    submitRef.current = true;
+    setLoading(true);
+    setMessage('');
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPass });
+      if (error) throw error;
+      
+      showMsg('Contraseña asignada correctamente. Ingresando...', 'success');
+      setTimeout(() => {
+        window.location.href = '/access';
+      }, 1500);
+    } catch (err: any) {
+      showMsg(err.message || 'Error al actualizar contraseña.', 'error');
       submitRef.current = false;
       setLoading(false);
     }
@@ -250,6 +286,47 @@ function AccessPageContent() {
                   Solicite acceso aquí
                 </button>
               </p>
+            </form>
+          )}
+
+          {/* ── Update Password form ────────────────────────────────────────── */}
+          {tab === 'update-password' && (
+            <form className="access-form" onSubmit={handleUpdatePassword} noValidate>
+              <div className="field-group">
+                <label className="field-label" htmlFor="new-password">
+                  Cree su contraseña
+                </label>
+                <div className="input-password-wrap">
+                  <input
+                    id="new-password"
+                    type={showPass ? 'text' : 'password'}
+                    className="text-input"
+                    placeholder="••••••••"
+                    value={newPass}
+                    onChange={e => setNewPass(e.target.value)}
+                    required
+                    autoFocus
+                  />
+                  <button
+                    type="button"
+                    className="pass-toggle"
+                    onClick={() => setShowPass(p => !p)}
+                    aria-label={showPass ? 'Ocultar' : 'Mostrar'}
+                  >
+                    {showPass ? '🙈' : '👁️'}
+                  </button>
+                </div>
+              </div>
+              <button
+                type="submit"
+                id="update-submit"
+                className="continue-btn"
+                disabled={!newPass || loading}
+              >
+                {loading
+                  ? <><span className="spinner" aria-hidden="true" /> Guardando...</>
+                  : 'Guardar contraseña →'}
+              </button>
             </form>
           )}
 
