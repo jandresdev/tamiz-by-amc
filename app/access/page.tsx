@@ -63,7 +63,10 @@ function AccessPageContent() {
       } else if (event === 'INITIAL_SESSION' && !session && hash && (hash.includes('type=invite') || hash.includes('type=recovery'))) {
         // Token was likely already consumed or expired
         setTab('login');
-        setMessage('El enlace de invitación ya fue utilizado o ha expirado. Por favor inicie sesión o solicite uno nuevo al administrador.');
+        
+        // Debug mode: show what the hash actually contained
+        const safeHash = hash.replace(/access_token=[^&]+/, 'access_token=HIDDEN').replace(/refresh_token=[^&]+/, 'refresh_token=HIDDEN');
+        setMessage(`Error al iniciar sesión desde la invitación. (Detalles: ${safeHash}) Por favor solicite una nueva invitación o verifique las URLs.`);
         setMsgType('error');
       }
     });
