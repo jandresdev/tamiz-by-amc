@@ -26,10 +26,15 @@ export async function proxy(request: NextRequest) {
     }
   );
 
+  const path = request.nextUrl.pathname;
+
+  // ── Allow auth callback and password setup pages through freely ────────────
+  if (path.startsWith('/auth/callback') || path === '/update-password') {
+    return supabaseResponse;
+  }
+
   // Refresh session — keeps the JWT alive
   const { data: { user } } = await supabase.auth.getUser();
-
-  const path = request.nextUrl.pathname;
 
   // ── Protect /questionnaire ─────────────────────────────────────────────────
   if (path.startsWith('/questionnaire')) {
