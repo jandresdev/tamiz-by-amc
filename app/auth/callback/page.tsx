@@ -20,48 +20,68 @@ export default function AuthCallbackPage() {
   const handled = useRef(false);
 
   useEffect(() => {
-    const hash = window.location.hash;
+    if (handled.current) return;
 
-    const redirect = (session: boolean, error?: any) => {
-      if (handled.current) return;
-      handled.current = true;
+    const processHash = async () => {
+      try {
+        const hash = window.location.hash;
+        
+        // If there's no hash, we can't do anything here (maybe it's a direct visit)
+        if (!hash || !hash.includes('access_token=')) {
+          // Fallback check just in case a session already exists
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session) {
+            window.location.replace('/access');
+            return;
+          }
+          setStatus('No se encontró información de acceso en el enlace.');
+          return;
+        }
 
-      if (session) {
-        setStatus('Acceso confirmado. Redirigiendo...');
-        const isInviteOrRecovery = hash.includes('type=invite') || hash.includes('type=recovery');
-        window.location.replace(isInviteOrRecovery ? '/update-password' : '/access');
-      } else {
-        setStatus('Error al verificar el enlace.');
-        setDebugInfo({
-          hash: hash,
-          error: error?.message || error?.toString() || 'No session and no error provided',
-          url: window.location.href,
+        handled.current = true;
+        
+        // Remove the '#' and parse as query params
+        const hashParams = new URLSearchParams(hash.substring(1));
+        const access_token = hashParams.get('access_token');
+        const refresh_token = hashParams.get('refresh_token');
+        const type = hashParams.get('type');
+
+        if (!access_token || !refresh_token) {
+          setStatus('El enlace está incompleto o dañado.');
+          setDebugInfo({ error: 'Missing tokens in hash', hash });
+          return;
+        }
+
+        // Manually force the session
+        const { data, error } = await supabase.auth.setSession({
+          access_token,
+          refresh_token,
         });
+
+        if (error) {
+          setStatus('Error al verificar el enlace de invitación.');
+          setDebugInfo({ error: error.message, hash });
+          return;
+        }
+
+        if (data.session) {
+          setStatus('Acceso confirmado. Redirigiendo...');
+          // Redirect based on type
+          const isInviteOrRecovery = type === 'invite' || type === 'recovery' || hash.includes('type=invite');
+          window.location.replace(isInviteOrRecovery ? '/update-password' : '/access');
+        } else {
+          setStatus('No se pudo establecer la sesión.');
+          setDebugInfo({ error: 'setSession succeeded but returned no session', hash });
+        }
+
+      } catch (err: any) {
+        setStatus('Ocurrió un error inesperado.');
+        setDebugInfo({ error: err.message || String(err) });
       }
     };
 
-    // 1. Subscribe to auth state changes (fires when Supabase parses the hash)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION' || event === 'PASSWORD_RECOVERY') {
-        redirect(!!session);
-        subscription.unsubscribe();
-      }
-    });
-
-    // 2. Also check immediately after a short delay in case INITIAL_SESSION
-    //    already fired before we subscribed
-    const timer = setTimeout(async () => {
-      if (handled.current) return;
-      const { data: { session }, error } = await supabase.auth.getSession();
-      redirect(!!session, error);
-      subscription.unsubscribe();
-    }, 1500);
-
-    return () => {
-      clearTimeout(timer);
-      subscription.unsubscribe();
-    };
-  }, []);
+    processHash();
+  }, [supabase.auth]);
 
   return (
     <div style={{
