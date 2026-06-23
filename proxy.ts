@@ -75,6 +75,7 @@ export async function proxy(request: NextRequest) {
   }
 
   // ── Already logged-in users at /access → redirect to correct destination ──
+  // But don't redirect if they're on /update-password (setting first password)
   if (path === '/access' && user) {
     const { data: profile } = await supabase
       .from('tamiz_user_profiles')

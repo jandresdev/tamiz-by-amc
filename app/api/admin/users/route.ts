@@ -155,7 +155,7 @@ export async function POST(request: NextRequest) {
       contactEmail.trim().toLowerCase(),
       {
         data: { contact_name: contactName.trim(), company_name: companyName.trim() },
-        redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/access`,
+        redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/callback?type=invite`,
       }
     );
 
@@ -269,7 +269,7 @@ export async function PATCH(request: NextRequest) {
         req.contact_email,
         {
           data: { contact_name: req.contact_name, company_name: req.company_name },
-          redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/access`,
+          redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/callback?type=invite`,
         }
       );
 
