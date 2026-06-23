@@ -1,47 +1,76 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { createBrowserSupabaseClient } from '@/lib/supabase.client';
 
 /**
- * /auth/callback
+ * /auth/callback  — client-side token exchange
  *
- * Landing page for Supabase email links (invite, magic link, recovery).
- * Supabase sends tokens in the URL hash (#access_token=...&type=invite).
- * The browser-side Supabase client reads the hash, establishes a cookie
- * session, then we redirect to /update-password.
+ * Supabase sends invite/recovery tokens as URL hash fragments:
+ *   https://tamiz-by-amc.vercel.app/auth/callback#access_token=...&type=invite
  *
- * The server cannot read URL hashes, so this MUST be a client component.
+ * Hash fragments are never sent to the server, so this MUST be a client
+ * component. The Supabase JS client parses the hash and establishes a
+ * cookie session automatically when getSession() is called.
  */
 export default function AuthCallbackPage() {
+  const [status, setStatus] = useState('Verificando acceso...');
   const supabase = createBrowserSupabaseClient();
 
   useEffect(() => {
-    const handleAuthCallback = async () => {
-      // getSession() triggers the client to parse the hash and exchange tokens
-      const { data: { session }, error } = await supabase.auth.getSession();
+    const hash = typeof window !== 'undefined' ? window.location.hash : '';
 
-      if (error) {
-        console.error('[auth/callback] Session error:', error.message);
-        window.location.href = `/access?error=${encodeURIComponent(error.message)}`;
-        return;
-      }
+    const processCallback = async () => {
+      // Small delay to ensure the JS client has time to parse the URL hash
+      await new Promise(r => setTimeout(r, 300));
 
-      if (session) {
-        // Session established — check the type from the hash
-        const hash = window.location.hash;
-        if (hash.includes('type=invite') || hash.includes('type=recovery')) {
-          window.location.href = '/update-password';
-        } else {
-          window.location.href = '/access';
+      // Listen for auth state change first (more reliable than getSession)
+      const { data: { subscription } } = supabase.auth.onAuthStateChange(
+        async (event, session) => {
+          subscription.unsubscribe(); // only handle once
+
+          if (session) {
+            setStatus('Acceso confirmado. Redirigiendo...');
+            // Redirect to update-password for invites and recovery, else home
+            if (hash.includes('type=invite') || hash.includes('type=recovery')) {
+              window.location.replace('/update-password');
+            } else {
+              window.location.replace('/access');
+            }
+          } else {
+            // Fallback: try getSession directly
+            const { data: { session: fallbackSession } } = await supabase.auth.getSession();
+            if (fallbackSession) {
+              setStatus('Acceso confirmado. Redirigiendo...');
+              if (hash.includes('type=invite') || hash.includes('type=recovery')) {
+                window.location.replace('/update-password');
+              } else {
+                window.location.replace('/access');
+              }
+            } else {
+              setStatus('Enlace inválido o ya utilizado.');
+              setTimeout(() => {
+                window.location.replace('/access?error=invalid_link');
+              }, 2000);
+            }
+          }
         }
-      } else {
-        // No session — token may have been invalid or already used
-        window.location.href = '/access?error=invalid_link';
+      );
+
+      // Also try getSession immediately in case INITIAL_SESSION already fired
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        subscription.unsubscribe();
+        setStatus('Acceso confirmado. Redirigiendo...');
+        if (hash.includes('type=invite') || hash.includes('type=recovery')) {
+          window.location.replace('/update-password');
+        } else {
+          window.location.replace('/access');
+        }
       }
     };
 
-    handleAuthCallback();
+    processCallback();
   }, []);
 
   return (
@@ -56,14 +85,14 @@ export default function AuthCallbackPage() {
       background: '#f8f9fa',
     }}>
       <div style={{
-        width: 40,
-        height: 40,
+        width: 44,
+        height: 44,
         border: '3px solid #6c63ff',
         borderTopColor: 'transparent',
         borderRadius: '50%',
         animation: 'spin 0.8s linear infinite',
       }} />
-      <p style={{ color: '#555', margin: 0 }}>Verificando acceso...</p>
+      <p style={{ color: '#555', margin: 0, fontSize: '0.95rem' }}>{status}</p>
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );

@@ -5,6 +5,24 @@ import { isSuperAdmin, getCurrentUser } from '@/lib/auth';
 
 const SUPERADMIN_EMAIL = process.env.SUPERADMIN_EMAIL || 'ops@amcprincipal.com';
 
+/**
+ * Resolves the canonical production base URL for building redirectTo links.
+ * Priority:
+ *   1. VERCEL_URL (auto-injected by Vercel on every deployment)
+ *   2. NEXT_PUBLIC_APP_URL if it is not a localhost/dev URL
+ *   3. Hard-coded production fallback
+ */
+function getBaseUrl(): string {
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`;
+  }
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? '';
+  if (appUrl && !appUrl.includes('localhost') && !appUrl.includes('127.0.0.1')) {
+    return appUrl;
+  }
+  return 'https://tamiz-by-amc.vercel.app';
+}
+
 // Used only as a fallback when Supabase's invite email is rate-limited —
 // generates a unique, unguessable temporary password per user instead of a
 // shared static one.
@@ -155,7 +173,7 @@ export async function POST(request: NextRequest) {
       contactEmail.trim().toLowerCase(),
       {
         data: { contact_name: contactName.trim(), company_name: companyName.trim() },
-        redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`,
+        redirectTo: `${getBaseUrl()}/auth/callback`,
       }
     );
 
@@ -269,7 +287,7 @@ export async function PATCH(request: NextRequest) {
         req.contact_email,
         {
           data: { contact_name: req.contact_name, company_name: req.company_name },
-          redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`,
+          redirectTo: `${getBaseUrl()}/auth/callback`,
         }
       );
 
