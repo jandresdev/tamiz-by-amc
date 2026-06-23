@@ -8,17 +8,18 @@ const SUPERADMIN_EMAIL = process.env.SUPERADMIN_EMAIL || 'ops@amcprincipal.com';
 /**
  * Resolves the canonical production base URL for building redirectTo links.
  * Priority:
- *   1. VERCEL_URL (auto-injected by Vercel on every deployment)
- *   2. NEXT_PUBLIC_APP_URL if it is not a localhost/dev URL
- *   3. Hard-coded production fallback
+ *   1. NEXT_PUBLIC_APP_URL — set explicitly in Vercel dashboard by the user
+ *   2. Hard-coded production fallback (same domain as Supabase Site URL)
+ *
+ * NOTE: VERCEL_URL is intentionally NOT used here because it returns a
+ * deployment-specific URL (e.g. tamiz-by-amc-abc123.vercel.app) which is
+ * NOT in Supabase's allowed redirect URL list and causes Supabase to fall
+ * back to the Site URL root, breaking the invite flow.
  */
 function getBaseUrl(): string {
-  if (process.env.VERCEL_URL) {
-    return `https://${process.env.VERCEL_URL}`;
-  }
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? '';
   if (appUrl && !appUrl.includes('localhost') && !appUrl.includes('127.0.0.1')) {
-    return appUrl;
+    return appUrl.replace(/\/$/, ''); // strip trailing slash
   }
   return 'https://tamiz-by-amc.vercel.app';
 }
