@@ -13,6 +13,12 @@ import { createBrowserSupabaseClient } from '@/lib/supabase.client';
  * component. The Supabase JS client parses the hash and establishes a
  * cookie session automatically.
  */
+// Capture hash immediately before Supabase client initializes and clears it
+let initialHash = '';
+if (typeof window !== 'undefined') {
+  initialHash = window.location.hash;
+}
+
 export default function AuthCallbackPage() {
   const [status, setStatus] = useState('Verificando acceso...');
   const [debugInfo, setDebugInfo] = useState<any>(null);
@@ -24,17 +30,24 @@ export default function AuthCallbackPage() {
 
     const processHash = async () => {
       try {
-        const hash = window.location.hash;
+        // Use initialHash if window.location.hash was already cleared by Supabase
+        const hash = window.location.hash || initialHash;
         
         // If there's no hash, we can't do anything here (maybe it's a direct visit)
         if (!hash || !hash.includes('access_token=')) {
           // Fallback check just in case a session already exists
-          const { data: { session } } = await supabase.auth.getSession();
+          const { data: { session }, error: fallbackError } = await supabase.auth.getSession();
           if (session) {
             window.location.replace('/access');
             return;
           }
           setStatus('No se encontró información de acceso en el enlace.');
+          setDebugInfo({ 
+            error: 'No hash found in URL and no active session', 
+            windowLocationHash: window.location.hash,
+            initialHashVar: initialHash,
+            fallbackError: fallbackError?.message
+          });
           return;
         }
 
