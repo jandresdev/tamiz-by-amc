@@ -10,62 +10,67 @@
    -------------------------------------------------------------------------- */
 :root {
   /* ── Background layers ─────────────────────────────────────────────────── */
-  --bg:      #0a0f0d;
-  --bg2:     #0e1613;
-  --bg3:     #121e19;
+  --bg:      #050507;
+  --bg2:     #08080a;
+  --bg3:     #0c0c10;
 
   /* ── Glass surfaces ────────────────────────────────────────────────────── */
-  --card:       rgba(16, 32, 25, 0.55);
-  --card-solid: #142420;
-  --glass-blur: 16px;
-  --glass-border: rgba(34, 197, 94, 0.15);
-  --glass-border-hover: rgba(34, 197, 94, 0.30);
-  --glass-glow: rgba(34, 197, 94, 0.06);
+  --card:       rgba(5, 5, 10, 0.6);
+  --card-solid: #0a0a0f;
+  --glass-blur: 24px;
+  --glass-border: rgba(0, 243, 255, 0.25);
+  --glass-border-hover: rgba(0, 243, 255, 0.60);
+  --glass-glow: rgba(0, 243, 255, 0.15);
 
   /* ── Text ──────────────────────────────────────────────────────────────── */
-  --t1: #e8f5e9;
-  --t2: #8fae96;
-  --t3: #4a6b52;
+  --t1: #ffffff;
+  --t2: #a0b0c0;
+  --t3: #506070;
 
-  /* ── Accent (emerald) ──────────────────────────────────────────────────── */
-  --acc:      #22c55e;
-  --acc-hover:#16a34a;
-  --acc-bg:   rgba(34, 197, 94, 0.10);
-  --acc-t:    #86efac;
+  /* ── Accent (Cyan Neon) ────────────────────────────────────────────────── */
+  --acc:      #00f3ff;
+  --acc-hover:#00d0e6;
+  --acc-bg:   rgba(0, 243, 255, 0.10);
+  --acc-t:    #ffffff;
 
-  /* ── Green (success) ───────────────────────────────────────────────────── */
-  --grn:     #22c55e;
-  --grn-bg:  rgba(34, 197, 94, 0.10);
-  --grn-bdr: rgba(34, 197, 94, 0.30);
-  --grn-t:   #86efac;
-  --grn-t2:  #4ade80;
+  /* ── Secondary Accent (Magenta Neon) ───────────────────────────────────── */
+  --mag:      #d000ff;
+  --mag-bg:   rgba(208, 0, 255, 0.10);
+  
+  /* ── Green (success - keeping cyan for coherence, but mapped to grn) ───── */
+  --grn:     #00f3ff;
+  --grn-bg:  rgba(0, 243, 255, 0.10);
+  --grn-bdr: rgba(0, 243, 255, 0.40);
+  --grn-t:   #ffffff;
+  --grn-t2:  #00f3ff;
 
-  /* ── Amber (warning) ───────────────────────────────────────────────────── */
-  --amb-bg:  rgba(245, 158, 11, 0.10);
-  --amb-bdr: rgba(245, 158, 11, 0.35);
-  --amb-t:   #fbbf24;
-  --amb-t2:  #f59e0b;
+  /* ── Amber (warning - shifted to a more electric yellow) ───────────────── */
+  --amb-bg:  rgba(255, 204, 0, 0.10);
+  --amb-bdr: rgba(255, 204, 0, 0.40);
+  --amb-t:   #ffcc00;
+  --amb-t2:  #ffcc00;
 
-  /* ── Red (error / stop) ────────────────────────────────────────────────── */
-  --red-bg:  rgba(239, 68, 68, 0.10);
-  --red-bdr: rgba(239, 68, 68, 0.30);
-  --red-t:   #fca5a5;
-  --red-t2:  #ef4444;
+  /* ── Red (error / stop - cyber red) ────────────────────────────────────── */
+  --red-bg:  rgba(255, 0, 60, 0.10);
+  --red-bdr: rgba(255, 0, 60, 0.40);
+  --red-t:   #ff4d79;
+  --red-t2:  #ff003c;
 
   /* ── Border / Radius / Shadow ──────────────────────────────────────────── */
-  --bdr:    rgba(34, 197, 94, 0.12);
-  --bdr2:   rgba(34, 197, 94, 0.08);
+  --bdr:    rgba(0, 243, 255, 0.15);
+  --bdr2:   rgba(0, 243, 255, 0.08);
   --r1: 8px;
-  --r2: 14px;
-  --r3: 20px;
-  --sh:  0 4px 24px rgba(0, 0, 0, 0.4), 0 0 40px rgba(34, 197, 94, 0.04);
-  --sh2: 0 2px 8px rgba(0, 0, 0, 0.3);
-  --sh-glow: 0 0 20px rgba(34, 197, 94, 0.08), 0 0 60px rgba(34, 197, 94, 0.04);
+  --r2: 12px;
+  --r3: 16px;
+  --sh:  0 8px 32px rgba(0, 0, 0, 0.6), 0 0 20px rgba(0, 243, 255, 0.1);
+  --sh2: 0 4px 16px rgba(0, 0, 0, 0.4);
+  --sh-glow: 0 0 20px rgba(0, 243, 255, 0.2), inset 0 0 15px rgba(0, 243, 255, 0.05);
+  --sh-glow-strong: 0 0 30px rgba(0, 243, 255, 0.4), inset 0 0 20px rgba(0, 243, 255, 0.1);
 
   /* ── Transitions ───────────────────────────────────────────────────────── */
-  --tr: .25s cubic-bezier(.4, 0, .2, 1);
-  --tr-fast: .15s cubic-bezier(.4, 0, .2, 1);
-  --tr-spring: .4s cubic-bezier(.34, 1.56, .64, 1);
+  --tr: .3s cubic-bezier(.1, 0, .1, 1);
+  --tr-fast: .15s cubic-bezier(.1, 0, .1, 1);
+  --tr-spring: .5s cubic-bezier(.2, 1.2, .4, 1);
 }
 
 /* --------------------------------------------------------------------------
@@ -81,8 +86,8 @@ body {
   margin: 0;
   background-color: var(--bg);
   background-image: 
-    radial-gradient(circle at 15% 50%, rgba(34, 197, 94, 0.08), transparent 25%),
-    radial-gradient(circle at 85% 30%, rgba(16, 185, 129, 0.08), transparent 25%);
+    radial-gradient(circle at 15% 50%, rgba(0, 243, 255, 0.08), transparent 25%),
+    radial-gradient(circle at 85% 30%, rgba(208, 0, 255, 0.08), transparent 25%);
   background-attachment: fixed;
   color: var(--t1);
 }
@@ -93,10 +98,10 @@ body {
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-track { background: var(--bg); }
 ::-webkit-scrollbar-thumb {
-  background: rgba(34, 197, 94, 0.2);
+  background: rgba(0, 243, 255, 0.2);
   border-radius: 4px;
 }
-::-webkit-scrollbar-thumb:hover { background: rgba(34, 197, 94, 0.35); }
+::-webkit-scrollbar-thumb:hover { background: rgba(0, 243, 255, 0.35); }
 
 /* --------------------------------------------------------------------------
    App root
@@ -121,8 +126,8 @@ body {
   position: fixed;
   inset: 0;
   background-image: 
-    linear-gradient(to right, rgba(34, 197, 94, 0.02) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(34, 197, 94, 0.02) 1px, transparent 1px);
+    linear-gradient(to right, rgba(0, 243, 255, 0.02) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0, 243, 255, 0.02) 1px, transparent 1px);
   background-size: 30px 30px;
   pointer-events: none;
   z-index: 0;
@@ -139,8 +144,8 @@ body {
   width: 200%;
   height: 50vh;
   background-image: 
-    linear-gradient(to right, rgba(34, 197, 94, 0.15) 1px, transparent 1px),
-    linear-gradient(to top, rgba(34, 197, 94, 0.15) 1px, transparent 1px);
+    linear-gradient(to right, rgba(0, 243, 255, 0.15) 1px, transparent 1px),
+    linear-gradient(to top, rgba(0, 243, 255, 0.15) 1px, transparent 1px);
   background-size: 40px 40px;
   transform: perspective(600px) rotateX(70deg);
   transform-origin: bottom center;
@@ -378,7 +383,7 @@ textarea,
 }
 
 .info-block summary:hover {
-  background: rgba(34, 197, 94, 0.04);
+  background: rgba(0, 243, 255, 0.04);
 }
 
 .info-block summary > span:first-child {
@@ -482,7 +487,7 @@ textarea,
   padding: 4px 12px;
   border-radius: 999px;
   border: 1px solid var(--glass-border);
-  background: rgba(34, 197, 94, 0.06);
+  background: rgba(0, 243, 255, 0.06);
   color: var(--t1);
   font-weight: 500;
   transition: all .25s;
@@ -501,7 +506,7 @@ textarea,
   color: var(--grn-t2);
   border-color: var(--grn-bdr);
   font-weight: 700;
-  box-shadow: 0 0 12px rgba(34, 197, 94, 0.15);
+  box-shadow: 0 0 16px rgba(0, 243, 255, 0.4), inset 0 0 8px rgba(0, 243, 255, 0.2);
 }
 
 /* --------------------------------------------------------------------------
@@ -517,7 +522,7 @@ textarea,
   flex: 1;
   height: 5px;
   border-radius: 3px;
-  background: rgba(34, 197, 94, 0.1);
+  background: rgba(0, 243, 255, 0.1);
   transition: background .4s;
   position: relative;
   overflow: hidden;
@@ -527,11 +532,11 @@ textarea,
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(90deg, var(--acc), #10b981);
+  background: linear-gradient(90deg, var(--acc), var(--mag));
   transform: scaleX(0);
   transform-origin: left;
   transition: transform .35s ease;
-  box-shadow: 0 0 8px rgba(34, 197, 94, 0.4);
+  box-shadow: 0 0 12px rgba(208, 0, 255, 0.4);
 }
 
 .progress-step.active::after {
@@ -539,8 +544,8 @@ textarea,
 }
 
 .progress-step.done {
-  background: var(--grn);
-  box-shadow: 0 0 6px rgba(34, 197, 94, 0.3);
+  background: var(--acc);
+  box-shadow: 0 0 10px rgba(0, 243, 255, 0.5);
 }
 
 .progress-step.done::after {
@@ -557,7 +562,7 @@ textarea,
   border: 1px solid var(--glass-border);
   border-radius: var(--r3);
   padding: 28px 26px 24px;
-  box-shadow: var(--sh), var(--sh-glow);
+  box-shadow: var(--sh), var(--sh-glow-strong);
   animation: qIn .35s cubic-bezier(.34, 1.56, .64, 1) both;
   position: relative;
   overflow: hidden;
@@ -571,7 +576,7 @@ textarea,
   left: -100%;
   width: 60%;
   height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(34, 197, 94, 0.03), transparent);
+  background: linear-gradient(90deg, transparent, rgba(0, 243, 255, 0.1), transparent);
   animation: glassShimmer 6s ease-in-out infinite;
   pointer-events: none;
 }
@@ -610,7 +615,7 @@ textarea,
   margin: 0 0 18px;
   line-height: 1.65;
   padding: 10px 14px;
-  background: rgba(34, 197, 94, 0.04);
+  background: rgba(0, 243, 255, 0.04);
   border-left: 3px solid var(--acc);
   border-radius: 0 var(--r1) var(--r1) 0;
   font-style: italic;
@@ -655,7 +660,7 @@ textarea,
 }
 
 .answer-btn:hover {
-  background: rgba(34, 197, 94, 0.08);
+  background: rgba(0, 243, 255, 0.08);
   border-color: var(--glass-border-hover);
   color: var(--t1) !important;
   transform: translateX(4px);
@@ -674,7 +679,7 @@ textarea,
   border-color: var(--acc);
   color: var(--acc-t);
   font-weight: 500;
-  box-shadow: 0 0 16px rgba(34, 197, 94, 0.1);
+  box-shadow: 0 0 20px rgba(0, 243, 255, 0.4), inset 0 0 10px rgba(0, 243, 255, 0.15);
 }
 
 .answer-btn.selected::before {
@@ -732,7 +737,7 @@ textarea,
 .text-input:focus {
   outline: none;
   border-color: var(--acc);
-  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.12), 0 0 20px rgba(34, 197, 94, 0.06);
+  box-shadow: 0 0 0 3px rgba(0, 243, 255, 0.12), 0 0 20px rgba(0, 243, 255, 0.06);
 }
 
 .text-input.input-error {
@@ -784,7 +789,7 @@ textarea,
   width: 100%;
   margin-top: 20px;
   padding: 14px 24px;
-  background: linear-gradient(135deg, var(--acc) 0%, #10b981 100%);
+  background: linear-gradient(135deg, var(--acc) 0%, #d000ff 100%);
   color: #fff;
   border: none;
   border-radius: var(--r2);
@@ -809,7 +814,7 @@ textarea,
 
 .continue-btn:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(34, 197, 94, 0.35), 0 0 40px rgba(34, 197, 94, 0.15);
+  box-shadow: 0 8px 24px rgba(0, 243, 255, 0.35), 0 0 40px rgba(0, 243, 255, 0.15);
 }
 
 .continue-btn:hover:not(:disabled)::before {
@@ -821,7 +826,7 @@ textarea,
 }
 
 .continue-btn:disabled {
-  background: rgba(34, 197, 94, 0.15);
+  background: rgba(0, 243, 255, 0.15);
   color: var(--t3);
   cursor: not-allowed;
   transform: none;
@@ -860,7 +865,7 @@ textarea,
 }
 
 .nav-btn:hover {
-  background: rgba(34, 197, 94, 0.08);
+  background: rgba(0, 243, 255, 0.08);
   border-color: var(--glass-border);
   color: var(--t1);
 }
@@ -883,7 +888,7 @@ textarea,
   border-color: var(--acc);
   background: var(--acc-bg);
   transform: scale(1.01);
-  box-shadow: 0 0 20px rgba(34, 197, 94, 0.15);
+  box-shadow: 0 0 20px rgba(0, 243, 255, 0.15);
 }
 
 .upload-zone.has-file {
@@ -937,7 +942,7 @@ textarea,
 }
 
 .upload-btn-label:hover {
-  background: rgba(34, 197, 94, 0.08);
+  background: rgba(0, 243, 255, 0.08);
   border-color: var(--glass-border-hover);
 }
 
@@ -1041,7 +1046,7 @@ textarea,
 .toast.loading {
   background: var(--acc-bg);
   color: var(--acc-t);
-  border: 1px solid rgba(34, 197, 94, 0.3);
+  border: 1px solid rgba(0, 243, 255, 0.3);
 }
 
 .toast.info {
@@ -1098,12 +1103,12 @@ textarea,
 .result-card.match {
   background: var(--grn-bg);
   border: 1px solid var(--grn-bdr);
-  box-shadow: 0 0 24px rgba(34, 197, 94, 0.08);
+  box-shadow: 0 0 24px rgba(0, 243, 255, 0.08);
 }
 
 .result-card.match::before {
-  background: linear-gradient(90deg, var(--grn), #10b981);
-  box-shadow: 0 0 12px rgba(34, 197, 94, 0.4);
+  background: linear-gradient(90deg, var(--grn), #d000ff);
+  box-shadow: 0 0 12px rgba(0, 243, 255, 0.4);
 }
 
 .result-card.no-match {
@@ -1204,7 +1209,7 @@ textarea,
 .normative-textarea:focus {
   outline: none;
   border-color: var(--acc);
-  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.12);
+  box-shadow: 0 0 0 3px rgba(0, 243, 255, 0.12);
 }
 
 .normative-helper {
@@ -1348,11 +1353,11 @@ textarea,
 .send-status.sending {
   background: var(--acc-bg);
   color: var(--acc-t);
-  border-color: rgba(34, 197, 94, 0.3);
+  border-color: rgba(0, 243, 255, 0.3);
 }
 
 .send-status.sending .spinner {
-  border-color: rgba(34, 197, 94, 0.3);
+  border-color: rgba(0, 243, 255, 0.3);
   border-top-color: var(--acc);
 }
 
@@ -1392,13 +1397,13 @@ textarea,
 }
 
 .action-btn.primary {
-  background: linear-gradient(135deg, var(--acc) 0%, #10b981 100%);
+  background: linear-gradient(135deg, var(--acc) 0%, #d000ff 100%);
   color: #fff;
   border-color: transparent;
 }
 
 .action-btn.primary:hover:not(:disabled) {
-  box-shadow: 0 8px 24px rgba(34, 197, 94, 0.3);
+  box-shadow: 0 8px 24px rgba(0, 243, 255, 0.3);
   transform: translateY(-1px);
 }
 
@@ -1411,7 +1416,7 @@ textarea,
 }
 
 .action-btn.secondary:hover:not(:disabled) {
-  background: rgba(34, 197, 94, 0.08);
+  background: rgba(0, 243, 255, 0.08);
   border-color: var(--glass-border);
   color: var(--t1) !important;
 }
@@ -1478,7 +1483,7 @@ textarea,
   border-radius: 999px;
   font-size: 13px;
   font-weight: 600;
-  border: 1px solid rgba(34, 197, 94, 0.3);
+  border: 1px solid rgba(0, 243, 255, 0.3);
   word-break: break-all;
 }
 
@@ -1505,7 +1510,7 @@ textarea,
 
 .token-input:focus {
   border-color: var(--acc);
-  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.12), 0 0 20px rgba(34, 197, 94, 0.06);
+  box-shadow: 0 0 0 3px rgba(0, 243, 255, 0.12), 0 0 20px rgba(0, 243, 255, 0.06);
   outline: none;
 }
 
@@ -1652,7 +1657,7 @@ textarea,
 
 .timeout-bar-wrap {
   height: 4px;
-  background: rgba(34, 197, 94, 0.1);
+  background: rgba(0, 243, 255, 0.1);
   border-radius: 2px;
   overflow: hidden;
 }
@@ -1716,7 +1721,7 @@ textarea,
     transform: translate(-50%, -50%) rotate(-35deg);
     font-size: 42px;
     font-weight: 900;
-    color: rgba(34, 197, 94, 0.06);
+    color: rgba(0, 243, 255, 0.06);
     letter-spacing: .08em;
     text-transform: uppercase;
     z-index: 9999;
@@ -1879,7 +1884,7 @@ textarea,
   right: -120px;
   width: 400px;
   height: 400px;
-  background: radial-gradient(circle, rgba(34, 197, 94, 0.12) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(0, 243, 255, 0.12) 0%, transparent 70%);
   pointer-events: none;
   animation: floatOrb 15s ease-in-out infinite;
 }
@@ -1891,7 +1896,7 @@ textarea,
   left: -80px;
   width: 300px;
   height: 300px;
-  background: radial-gradient(circle, rgba(16, 185, 129, 0.08) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(208, 0, 255, 0.08) 0%, transparent 70%);
   pointer-events: none;
   animation: floatOrb 20s ease-in-out infinite reverse;
 }
@@ -1909,8 +1914,8 @@ textarea,
   letter-spacing: .1em;
   text-transform: uppercase;
   color: var(--acc);
-  background: rgba(34, 197, 94, 0.1);
-  border: 1px solid rgba(34, 197, 94, 0.2);
+  background: rgba(0, 243, 255, 0.1);
+  border: 1px solid rgba(0, 243, 255, 0.2);
   padding: 4px 12px;
   border-radius: 999px;
   margin-bottom: 20px;
@@ -1992,7 +1997,7 @@ textarea,
   transform: translate(-50%, -50%);
   width: 500px;
   height: 500px;
-  background: radial-gradient(circle, rgba(34, 197, 94, 0.04) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(0, 243, 255, 0.04) 0%, transparent 70%);
   pointer-events: none;
 }
 
@@ -2054,7 +2059,7 @@ textarea,
   margin-bottom: 18px;
 }
 
-.access-msg-info    { background: var(--acc-bg); color: var(--acc-t); border: 1px solid rgba(34, 197, 94, 0.25); }
+.access-msg-info    { background: var(--acc-bg); color: var(--acc-t); border: 1px solid rgba(0, 243, 255, 0.25); }
 .access-msg-success { background: var(--grn-bg); color: var(--grn-t); border: 1px solid var(--grn-bdr); }
 .access-msg-error   { background: var(--red-bg); color: var(--red-t); border: 1px solid var(--red-bdr); }
 
@@ -2231,14 +2236,14 @@ textarea,
 }
 
 .sa-nav-item:hover {
-  background: rgba(34, 197, 94, 0.06);
+  background: rgba(0, 243, 255, 0.06);
   color: var(--t1);
 }
 
 .sa-nav-item.active {
-  background: linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(34, 197, 94, 0.08));
+  background: linear-gradient(135deg, rgba(0, 243, 255, 0.15), rgba(0, 243, 255, 0.08));
   color: var(--acc);
-  border: 1px solid rgba(34, 197, 94, 0.2);
+  border: 1px solid rgba(0, 243, 255, 0.2);
 }
 
 .sa-nav-badge {
@@ -2272,7 +2277,7 @@ textarea,
 
 .sa-logout-btn {
   width: 100%;
-  background: rgba(34, 197, 94, 0.06);
+  background: rgba(0, 243, 255, 0.06);
   border: 1px solid var(--bdr);
   color: var(--t2);
   font-size: 12.5px;
@@ -2285,7 +2290,7 @@ textarea,
 }
 
 .sa-logout-btn:hover {
-  background: rgba(34, 197, 94, 0.12);
+  background: rgba(0, 243, 255, 0.12);
   color: var(--t1);
   border-color: var(--glass-border);
 }
@@ -2383,7 +2388,7 @@ textarea,
   background: var(--grn);
   display: inline-block;
   animation: saPulse 2s infinite;
-  box-shadow: 0 0 8px rgba(34, 197, 94, 0.4);
+  box-shadow: 0 0 8px rgba(0, 243, 255, 0.4);
 }
 
 @keyframes saPulse {
@@ -2415,14 +2420,14 @@ textarea,
 }
 
 .sa-filter-tab:hover {
-  background: rgba(34, 197, 94, 0.06);
+  background: rgba(0, 243, 255, 0.06);
   border-color: var(--glass-border);
 }
 
 .sa-filter-tab.active {
-  background: linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(34, 197, 94, 0.08));
+  background: linear-gradient(135deg, rgba(0, 243, 255, 0.15), rgba(0, 243, 255, 0.08));
   color: var(--acc);
-  border-color: rgba(34, 197, 94, 0.3);
+  border-color: rgba(0, 243, 255, 0.3);
 }
 
 /* ── Search ─────────────────────────────────────────────────────────────────── */
@@ -2475,9 +2480,9 @@ textarea,
 
 .sa-table tbody tr { transition: background var(--tr); }
 
-.sa-table tbody tr:hover { background: rgba(34, 197, 94, 0.03); }
+.sa-table tbody tr:hover { background: rgba(0, 243, 255, 0.03); }
 
-.sa-row-online { background: rgba(34, 197, 94, 0.04) !important; }
+.sa-row-online { background: rgba(0, 243, 255, 0.04) !important; }
 
 /* ── User cell ──────────────────────────────────────────────────────────────── */
 .sa-user-cell {
@@ -2529,7 +2534,7 @@ textarea,
   background: var(--grn);
   display: inline-block;
   animation: saPulse 2s infinite;
-  box-shadow: 0 0 6px rgba(34, 197, 94, 0.4);
+  box-shadow: 0 0 6px rgba(0, 243, 255, 0.4);
 }
 
 .sa-role-badge {
@@ -2574,7 +2579,7 @@ textarea,
   background: var(--grn);
   color: #fff;
   border-color: var(--grn);
-  box-shadow: 0 0 12px rgba(34, 197, 94, 0.3);
+  box-shadow: 0 0 12px rgba(0, 243, 255, 0.3);
 }
 
 .sa-action-reject {
@@ -2590,7 +2595,7 @@ textarea,
 
 .sa-action-role {
   background: var(--acc-bg);
-  border-color: rgba(34, 197, 94, 0.3);
+  border-color: rgba(0, 243, 255, 0.3);
   color: var(--acc-t);
 }
 

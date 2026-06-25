@@ -9,50 +9,50 @@ export const SCHEMES: Record<RegulatoryScheme, {
   AUTOGEN: {
     label: 'Autogeneración Remota',
     description: 'Producción de energía para uso propio desde fuente remota',
-    color: '#22c55e',
-    bgColor: 'rgba(34, 197, 94, 0.10)',
+    color: '#00f3ff', // Cyan
+    bgColor: 'rgba(0, 243, 255, 0.10)',
   },
   PMARG: {
     label: 'Producción Marginal Remota',
     description: 'Producción con conexión a red y venta de excedentes',
-    color: '#10b981',
-    bgColor: 'rgba(16, 185, 129, 0.10)',
+    color: '#d000ff', // Magenta
+    bgColor: 'rgba(208, 0, 255, 0.10)',
   },
   SUMIN: {
     label: 'Suministro de Energía',
     description: 'Compra de energía a un proveedor regulado',
-    color: '#e8f5e9',
-    bgColor: 'rgba(232, 245, 233, 0.08)',
+    color: '#a0b0c0', // Blueish grey
+    bgColor: 'rgba(160, 176, 192, 0.10)',
   },
   VENTAEXC: {
     label: 'Venta de Excedentes',
     description: 'Venta de excedentes de autogeneración',
-    color: '#f59e0b',
-    bgColor: 'rgba(245, 158, 11, 0.10)',
+    color: '#ff003c', // Cyber red
+    bgColor: 'rgba(255, 0, 60, 0.10)',
   },
   SINSOP: {
     label: 'Sin Soporte Regulatorio',
     description: 'Esquema no soportado por regulación actual',
-    color: '#4a6b52',
-    bgColor: 'rgba(74, 107, 82, 0.08)',
+    color: '#304050', // Darker blueish grey
+    bgColor: 'rgba(48, 64, 80, 0.10)',
   },
 };
 
 export const COLOR_PALETTE = {
-  bg: '#0a0f0d',
-  bg2: '#0e1613',
-  card: 'rgba(16, 32, 25, 0.55)',
-  t1: '#e8f5e9',
-  t2: '#8fae96',
-  t3: '#4a6b52',
-  acc: '#22c55e',
-  grn: '#22c55e',
-  red: '#ef4444',
-  redBg: 'rgba(239, 68, 68, 0.10)',
-  grnBg: 'rgba(34, 197, 94, 0.10)',
-  accBg: 'rgba(34, 197, 94, 0.10)',
-  border: 'rgba(34, 197, 94, 0.12)',
-  shadow: 'rgba(0, 0, 0, 0.4)',
+  bg: '#050507',
+  bg2: '#08080a',
+  card: 'rgba(5, 5, 10, 0.6)',
+  t1: '#ffffff',
+  t2: '#a0b0c0',
+  t3: '#506070',
+  acc: '#00f3ff', // Cyan neon
+  grn: '#00f3ff', // Defaulting success to cyan for this aesthetic
+  red: '#ff003c',
+  redBg: 'rgba(255, 0, 60, 0.10)',
+  grnBg: 'rgba(0, 243, 255, 0.10)',
+  accBg: 'rgba(0, 243, 255, 0.10)',
+  border: 'rgba(0, 243, 255, 0.25)',
+  shadow: 'rgba(0, 243, 255, 0.20)', // Glowing shadow
 };
 
 export const QUESTIONS = {
