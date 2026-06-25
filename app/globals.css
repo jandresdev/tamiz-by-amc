@@ -79,7 +79,11 @@
 
 body {
   margin: 0;
-  background: var(--bg);
+  background-color: var(--bg);
+  background-image: 
+    radial-gradient(circle at 15% 50%, rgba(34, 197, 94, 0.08), transparent 25%),
+    radial-gradient(circle at 85% 30%, rgba(16, 185, 129, 0.08), transparent 25%);
+  background-attachment: fixed;
   color: var(--t1);
 }
 
@@ -99,7 +103,6 @@ body {
    -------------------------------------------------------------------------- */
 #amc-app {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
-  background: var(--bg);
   color: var(--t1);
   line-height: 1.55;
   padding: 28px 16px 64px;
@@ -112,38 +115,45 @@ body {
   overflow-x: hidden;
 }
 
-/* Ambient background orbs */
+/* Futuristic Cyber-Grid Background (Static top mesh) */
 #amc-app::before {
   content: '';
   position: fixed;
-  top: -200px;
-  right: -200px;
-  width: 600px;
-  height: 600px;
-  background: radial-gradient(circle, rgba(34, 197, 94, 0.06) 0%, transparent 70%);
+  inset: 0;
+  background-image: 
+    linear-gradient(to right, rgba(34, 197, 94, 0.02) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(34, 197, 94, 0.02) 1px, transparent 1px);
+  background-size: 30px 30px;
   pointer-events: none;
   z-index: 0;
-  animation: floatOrb 20s ease-in-out infinite;
+  mask-image: radial-gradient(circle at center, black 40%, transparent 100%);
+  -webkit-mask-image: radial-gradient(circle at center, black 40%, transparent 100%);
 }
 
+/* Futuristic Animated Perspective Grid (Bottom) */
 #amc-app::after {
   content: '';
   position: fixed;
-  bottom: -150px;
-  left: -150px;
-  width: 500px;
-  height: 500px;
-  background: radial-gradient(circle, rgba(16, 185, 129, 0.05) 0%, transparent 70%);
+  bottom: 0;
+  left: -50%;
+  width: 200%;
+  height: 50vh;
+  background-image: 
+    linear-gradient(to right, rgba(34, 197, 94, 0.15) 1px, transparent 1px),
+    linear-gradient(to top, rgba(34, 197, 94, 0.15) 1px, transparent 1px);
+  background-size: 40px 40px;
+  transform: perspective(600px) rotateX(70deg);
+  transform-origin: bottom center;
+  animation: gridMove 15s linear infinite;
   pointer-events: none;
   z-index: 0;
-  animation: floatOrb 25s ease-in-out infinite reverse;
+  mask-image: linear-gradient(to bottom, transparent 0%, black 100%);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 100%);
 }
 
-@keyframes floatOrb {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  25%  { transform: translate(30px, -20px) scale(1.05); }
-  50%  { transform: translate(-20px, 30px) scale(0.95); }
-  75%  { transform: translate(15px, 15px) scale(1.02); }
+@keyframes gridMove {
+  0%   { background-position: 0 0; }
+  100% { background-position: 0 40px; }
 }
 
 /* Neutralize external global typography */
